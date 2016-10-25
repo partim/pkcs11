@@ -1,5 +1,9 @@
 //! The System Interface to PKCS #11 aka Cryptoki.
 //!
+//! For the specification, see:
+//! http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html
+//! and
+//! http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/pkcs11-curr-v2.40.html
 #![allow(non_camel_case_types, non_snake_case)]
 
 extern crate libc;

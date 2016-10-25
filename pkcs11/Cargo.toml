@@ -5,5 +5,5 @@ authors = ["Martin Hoffmann <hn@nvnc.de>"]
 
 [dependencies]
 libc = "0.2"
-[dev-dependencies]
 libloading = "0.3"
+pkcs11-sys = { version = "0.1.0", path = "../pkcs11-sys" }
