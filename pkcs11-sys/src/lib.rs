@@ -1816,8 +1816,7 @@ pub struct CK_SEED_CBC_ENCRYPT_DATA_PARAMS {
 //
 // There’s three things defined via this header: A type for the function,
 // an extern function definition, and an entry into the CK_FUNCTION_LIST
-// structure. We can (almost) achieve the same thing with macros; so here
-// goes:
+// structure. We can (almost) achieve the same thing with macros.
 
 macro_rules! pkcs11_functions {
     {
