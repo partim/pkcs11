@@ -4,9 +4,6 @@
 
 use libc;
 
-//------------ Platform-specific Definitions ---------------------------------
-
-
 
 //------------ pkcs11t.h -----------------------------------------------------
 
@@ -82,7 +79,6 @@ pub const CKN_OTP_CHANGED: CK_NOTIFICATION = 1;
 
 pub type CK_SLOT_ID = CK_ULONG;
 
-
 /// Provides information about a slot.
 #[repr(C)]
 pub struct CK_SLOT_INFO {
@@ -98,7 +94,6 @@ pub struct CK_SLOT_INFO {
     pub firmwareVersion: CK_VERSION
 }
 
-
 // Flags for CK_SLOT_INFO.flags
 
 /// A token is there.
@@ -109,7 +104,6 @@ pub const CKF_REMOVABLE_DEVICE: CK_FLAGS = 2;
 
 /// Hardware slot.
 pub const CKF_HW_SLOW: CK_FLAGS = 4;
-
 
 /// Provides information about a token.
 #[repr(C)]
@@ -268,11 +262,8 @@ pub const CKF_SO_PIN_TO_BE_CHANGED: CK_FLAGS = 0x800000;
 
 pub const CKF_ERROR_STATE: CK_FLAGS = 0x1000000;
 
-
-
 /// A Cryptoki-assigned value that identifies a session.
 pub type CK_SESSION_HANDLE = CK_ULONG;
-
 
 /// Enumerates the types of Cryptoki users.
 pub type CK_USER_TYPE = CK_ULONG;
@@ -286,7 +277,6 @@ pub const CKU_USER: CK_USER_TYPE = 1;
 /// Context specific.
 pub const CKU_CONTEXT_SPECIFIC: CK_USER_TYPE = 2;
 
-
 /// Enumerates the session states.
 pub type CK_STATE = CK_ULONG;
 
@@ -295,7 +285,6 @@ pub const CKS_RO_USER_FUNCTIONS: CK_STATE = 1;
 pub const CKS_RW_PUBLIC_SESSION: CK_STATE = 2;
 pub const CKS_RW_USER_FUNCTIONS: CK_STATE = 3;
 pub const CKS_RW_SO_FUNCTIONS: CK_STATE = 4;
-
 
 /// Provides information about a session.
 #[repr(C)]
@@ -306,14 +295,11 @@ pub struct CK_SESSION_INFO {
     pub ulDeviceError: CK_ULONG,
 }
 
-// Flags for CK_SESSION_INFO
-
 /// Session is r/w.
 pub const CFK_RW_SESSION: CK_FLAGS = 2;
 
 /// No parallel.
 pub const CFK_SERIAL_SESSION: CK_FLAGS = 4;
-
 
 /// A token-specific identifier for an object.
 pub type CK_OBJECT_HANDLE = CK_ULONG;
@@ -333,7 +319,6 @@ pub const CKO_OTP_KEY: CK_OBJECT_CLASS = 8;
 
 pub const CKO_VENDOR_DEFINED: CK_OBJECT_CLASS = 0x8000_0000;
 
-
 /// Identifies the hardware feature type of an object of `CKO_HW_FEATURE` class.
 pub type CK_HW_FEATURE_TYPE = CK_ULONG;
 
@@ -341,7 +326,6 @@ pub const CKH_MONOTONIC_COUNTER  : CK_HW_FEATURE_TYPE = 0x00000001;
 pub const CKH_CLOCK              : CK_HW_FEATURE_TYPE = 0x00000002;
 pub const CKH_USER_INTERFACE     : CK_HW_FEATURE_TYPE = 0x00000003;
 pub const CKH_VENDOR_DEFINED     : CK_HW_FEATURE_TYPE = 0x80000000;
-
 
 /// Identifies a key type.
 pub type CK_KEY_TYPE = CK_ULONG;
@@ -394,7 +378,6 @@ pub const CKK_GOST28147           : CK_KEY_TYPE = 0x00000032;
 
 pub const CKK_VENDOR_DEFINED      : CK_KEY_TYPE = 0x80000000;
 
-
 /// Identifies a certificate type.
 pub type CK_CERTIFICATE_TYPE = CK_ULONG;
 
@@ -413,7 +396,6 @@ pub const CKC_X_509_ATTR_CERT     : CK_CERTIFICATE_TYPE = 0x00000001;
 pub const CKC_WTLS                : CK_CERTIFICATE_TYPE = 0x00000002;
 pub const CKC_VENDOR_DEFINED      : CK_CERTIFICATE_TYPE = 0x80000000;
 
-
 /// Identifies an attribute type.
 pub type CK_ATTRIBUTE_TYPE = CK_ULONG;
 
@@ -430,7 +412,6 @@ pub const CK_OTP_FORMAT_BINARY      : CK_ULONG = 3;
 pub const CK_OTP_PARAM_IGNORED  : CK_ULONG = 0;
 pub const CK_OTP_PARAM_OPTIONAL : CK_ULONG = 1;
 pub const CK_OTP_PARAM_MANDATORY: CK_ULONG = 2;
-
 
 pub const CKA_CLASS              : CK_ATTRIBUTE_TYPE = 0x00000000;
 pub const CKA_TOKEN              : CK_ATTRIBUTE_TYPE = 0x00000001;
@@ -560,7 +541,6 @@ pub const CKA_ALLOWED_MECHANISMS          : CK_ATTRIBUTE_TYPE =
 
 pub const CKA_VENDOR_DEFINED              : CK_ATTRIBUTE_TYPE = 0x80000000;
 
-
 /// Includes the type, length, and value of an attribute.
 #[repr(C)]
 pub struct CK_ATTRIBUTE {
@@ -568,7 +548,6 @@ pub struct CK_ATTRIBUTE {
     pub pValue: *const CK_VOID,
     pub ulValueLen: CK_ULONG,
 }
-
 
 /// Defines a date.
 #[repr(C)]
@@ -582,7 +561,6 @@ pub struct CK_DATE {
     /// The day ("01" - "31").
     pub day: [CK_CHAR; 2],
 }
-
 
 /// Identifies a mechanism type.
 ///
@@ -979,7 +957,6 @@ pub const CKM_RSA_PKCS_OAEP_TPM_1_1      : CK_MECHANISM_TYPE = 0x00004002;
 
 pub const CKM_VENDOR_DEFINED             : CK_MECHANISM_TYPE = 0x80000000;
 
-
 /// Specifies a particular mechanism
 #[repr(C)]
 pub struct CK_MECHANISM {
@@ -987,7 +964,6 @@ pub struct CK_MECHANISM {
     pub pParameter: *const CK_VOID,
     pub ulParameterLen: CK_ULONG,
 }
-
 
 /// Provides information about a partiuclar mechanism
 #[repr(C)]
@@ -1024,7 +1000,6 @@ pub const CKF_EC_UNCOMPRESS      : CK_FLAGS = 0x01000000;
 pub const CKF_EC_COMPRESS        : CK_FLAGS = 0x02000000;
 
 pub const CKF_EXTENSION          : CK_FLAGS = 0x80000000;
-
 
 /// The return value of a Cryptoki function.
 pub type CK_RV = CK_ULONG;
@@ -1158,7 +1133,6 @@ pub type CK_NOTIFY = unsafe extern "C" fn(hSession: CK_SESSION_HANDLE,
                                           pApplication: *const CK_VOID)
                                           -> CK_RV;
 
-
 /// An application callback for creating a mutex object.
 pub type CK_CREATEMUTEX = unsafe extern "C" fn(ppMutex: *mut *const CK_VOID)
                                                -> CK_RV;
@@ -1190,12 +1164,10 @@ pub struct CK_C_INITIALIZE_ARGS {
 pub const CKF_LIBRARY_CANT_CREATE_OS_THREADS: CK_FLAGS = 0x00000001;
 pub const CKF_OS_LOCKING_OK: CK_FLAGS = 0x00000002;
 
-
 // Additional flags for parameters to functions.
 
 /// For `C_WaitForSlotEvent`.
 pub const CKF_DONT_BLOCK: CK_FLAGS = 1;
-
 
 /// RSA PKCS MGF type.
 ///
@@ -1209,7 +1181,6 @@ pub const CKG_MGF1_SHA384       : CK_RSA_PKCS_MGF_TYPE = 0x00000003;
 pub const CKG_MGF1_SHA512       : CK_RSA_PKCS_MGF_TYPE = 0x00000004;
 pub const CKG_MGF1_SHA224       : CK_RSA_PKCS_MGF_TYPE = 0x00000005;
 
-
 /// OEAP source type.
 ///
 /// Indicates the source of the encoding parameter when formatting a message
@@ -1217,7 +1188,6 @@ pub const CKG_MGF1_SHA224       : CK_RSA_PKCS_MGF_TYPE = 0x00000005;
 pub type CK_RSA_PKCS_OAEP_SOURCE_TYPE = CK_ULONG;
 
 pub const CKZ_DATA_SPECIFIED: CK_RSA_PKCS_OAEP_SOURCE_TYPE = 1;
-
 
 /// The parameters to the `CKM_RSA_PKCS_OAEP` mechanism.
 #[repr(C)]
@@ -1229,7 +1199,6 @@ pub struct CK_RSA_PKCS_OAEP_PARAMS {
     pub pSourceDataLen: CK_ULONG
 }
 
-
 /// The parameters to the `CKM_RSA_PKCS_PSS` mechanism.
 #[repr(C)]
 pub struct CK_RSA_PKCS_PSS_PARAMS {
@@ -1237,7 +1206,6 @@ pub struct CK_RSA_PKCS_PSS_PARAMS {
     pub mgf: CK_RSA_PKCS_MGF_TYPE,
     pub sLen: CK_ULONG,
 }
-
 
 pub type CK_EC_KDF_TYPE = CK_ULONG;
 
@@ -1254,7 +1222,6 @@ pub const CKD_SHA384_KDF           : CK_EC_KDF_TYPE = 0x00000007;
 pub const CKD_SHA512_KDF           : CK_EC_KDF_TYPE = 0x00000008;
 pub const CKD_CPDIVERSIFY_KDF      : CK_EC_KDF_TYPE = 0x00000009;
 
-
 #[repr(C)]
 pub struct CK_ECDH1_DERIVE_PARAMS {
     pub kdf: CK_EC_KDF_TYPE,
@@ -1263,7 +1230,6 @@ pub struct CK_ECDH1_DERIVE_PARAMS {
     pub ulPublicDataLen: CK_ULONG,
     pub pPublicData: *const CK_BYTE,
 }
-
 
 #[repr(C)]
 pub struct CK_ECDH2_DERIVE_PARAMS {
@@ -1277,7 +1243,6 @@ pub struct CK_ECDH2_DERIVE_PARAMS {
     pub ulPublicDataLen2: CK_ULONG,
     pub pPublicData2: *const CK_BYTE,
 }
-
 
 #[repr(C)]
 pub struct CK_ECMQV_DERIVE_PARAMS {
@@ -1293,9 +1258,7 @@ pub struct CK_ECMQV_DERIVE_PARAMS {
     pub publicKey: CK_OBJECT_HANDLE,
 }
 
-
 pub type CK_X9_42_DH_KDF_TYPE = CK_ULONG;
-
 
 #[repr(C)]
 pub struct CK_X9_42_DH1_DERIVE_PARAMS {
@@ -1305,7 +1268,6 @@ pub struct CK_X9_42_DH1_DERIVE_PARAMS {
     pub ulPublicDataLen: CK_ULONG,
     pub pPublicData: *const CK_BYTE,
 }
-
 
 #[repr(C)]
 pub struct CK_X9_42_DH2_DERIVE_PARAMS {
@@ -1319,7 +1281,6 @@ pub struct CK_X9_42_DH2_DERIVE_PARAMS {
     pub ulPublicDataLen2: CK_ULONG,
     pub pPublicData2: *const CK_BYTE,
 }
-
 
 #[repr(C)]
 pub struct CK_X9_42_MQV_DERIVE_PARAMS {
@@ -1335,7 +1296,6 @@ pub struct CK_X9_42_MQV_DERIVE_PARAMS {
     pub publicKey: CK_OBJECT_HANDLE,
 }
 
-
 #[repr(C)]
 pub struct CK_KEA_DERIVE_PARAMS {
     pub isSender: CK_BBOOL,
@@ -1346,12 +1306,10 @@ pub struct CK_KEA_DERIVE_PARAMS {
     pub pPublicData: *const CK_BYTE,
 }
 
-
 /// The parameters to the `CKM_RC2_ECB` and `CKM_RC2_MAC` mechanisms.
 ///
 /// An instance of `CK_RC2_PARAMS` just holds the effective keysize
 pub type CK_RC2_PARAMS = CK_ULONG;
-
 
 /// The parameters to the `CKM_RC2_CBC` mechanism.
 #[repr(C)]
@@ -1363,7 +1321,6 @@ pub struct CK_RC2_CBC_PARAMS {
     pub iv: [CK_BYTE; 8],
 }
 
-
 /// The parameters for the `CKM_RC2_MAC_GENERAL` mechanism.
 #[repr(C)]
 pub struct CK_RC2_MAC_GENERAL_PARAMS {
@@ -1374,7 +1331,6 @@ pub struct CK_RC2_MAC_GENERAL_PARAMS {
     pub ulMacLength: CK_ULONG,
 }
 
-
 /// The parameters to the `CKM_RC5_ECB` and `CKM_RC5_MAC` mechanisms.
 #[repr(C)]
 pub struct CK_RC5_PARAMS {
@@ -1384,7 +1340,6 @@ pub struct CK_RC5_PARAMS {
     /// number of rounds
     pub ulRounds: CK_ULONG,
 }
-
 
 /// The parameters to the `CKM_RC5_CBC` mechanism.
 #[repr(C)]
@@ -1402,8 +1357,7 @@ pub struct CK_RC5_CBC_PARAMS {
     pub ulIvLen: CK_ULONG,
 }
 
-
-//// The parameters for the `CKM_RC5_MAC_GENERAL` mechanism.
+/// The parameters for the `CKM_RC5_MAC_GENERAL` mechanism.
 #[repr(C)]
 pub struct CK_RC5_MAC_GENERAL_PARAMS {
     /// wordsize in bits
@@ -1416,12 +1370,10 @@ pub struct CK_RC5_MAC_GENERAL_PARAMS {
     pub ulMacLength: CK_ULONG,
 }
 
-
 /// The parameters to most block ciphers' `MAC_GENERAL` mechanisms.
 ///
 /// Its value is the length of the MAC
 pub type CK_MAC_GENERAL_PARAMS = CK_ULONG;
-
 
 #[repr(C)]
 pub struct CK_DES_CBC_ENCRYPT_DATA_PARAMS {
@@ -1430,14 +1382,12 @@ pub struct CK_DES_CBC_ENCRYPT_DATA_PARAMS {
     pub length: CK_ULONG
 }
 
-
 #[repr(C)]
 pub struct CK_AES_CBC_ENCRYPT_DATA_PARAMS {
     pub iv: [CK_BYTE; 16],
     pub pData: *const CK_BYTE,
     pub length: CK_ULONG,
 }
-
 
 /// The parameters to the `CKM_SKIPJACK_PRIVATE_WRAP` mechanism.
 #[repr(C)]
@@ -1455,8 +1405,411 @@ pub struct CK_SKIPJACK_PRIVATE_WRAP_PARAMS {
     pub pSubprimeQ: *const CK_BYTE
 }
 
+/// The parameters to the `CKM_SKIPJACK_RELAYX` mechanism.
+#[repr(C)]
+pub struct CK_SKIPJACK_RELAYX_PARAMS {
+    pub ulOldWrappedXLen: CK_ULONG,
+    pub pOldWrappedX: *const CK_BYTE,
+    pub ulOldPasswordLen: CK_ULONG,
+    pub pOldPassword: *const CK_BYTE,
+    pub ulOldPublicDataLen: CK_ULONG,
+    pub pOldPublicData: *const CK_BYTE,
+    pub ulOldRandomLen: CK_ULONG,
+    pub pOldRandomA: *const CK_BYTE,
+    pub ulNewPasswordLen: CK_ULONG,
+    pub pNewPassword: *const CK_BYTE,
+    pub ulNewPublicDataLen: CK_ULONG,
+    pub pNewPublicData: *const CK_BYTE,
+    pub ulNewRandomLen: CK_ULONG,
+    pub pNewRandomA: *const CK_BYTE
+}
 
-// XXX Continue pkcs11t.h line 1522
+#[repr(C)]
+pub struct CK_PBE_PARAMS {
+    pub pInitVector: *const CK_BYTE,
+    pub pPassword: *const CK_UTF8CHAR,
+    pub ulPasswordLen: CK_ULONG,
+    pub pSalt: *const CK_BYTE,
+    pub ulSaltLen: CK_ULONG,
+    pub ilIteraton: CK_ULONG
+}
+
+/// The parameters to the CKM_KEY_WRAP_SET_OAEP mechanism.
+#[repr(C)]
+pub struct CK_KEY_WRAP_SET_OAEP_PARAMS {
+    pub bBC: CK_BYTE,
+    pub pX: *const CK_BYTE,
+    pub ulXLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_SSL3_RANDOM_DATA {
+    pub pClientRandom: *const CK_BYTE,
+    pub ulClientRandomLen: CK_ULONG,
+    pub pServerRandom: *const CK_BYTE,
+    pub ulServerRandomLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_SSL3_MASTER_KEY_DERIVE_PARAMS {
+    pub RandomInfo: CK_SSL3_RANDOM_DATA,
+    pub pVersion: *const CK_VERSION,
+}
+
+#[repr(C)]
+pub struct CK_SSL3_KEY_MAT_OUT {
+    pub hClientMacSecret: CK_OBJECT_HANDLE,
+    pub hServerMacSecret: CK_OBJECT_HANDLE,
+    pub hClientKey: CK_OBJECT_HANDLE,
+    pub hServerKey: CK_OBJECT_HANDLE,
+    pub pIVClient: *const CK_BYTE,
+    pub pIVServer: *const CK_BYTE,
+}
+
+#[repr(C)]
+pub struct CK_SSL3_KEY_MAT_PARAMS {
+    pub ulMacSizeInBits: CK_ULONG,
+    pub ulKeySizeInBits: CK_ULONG,
+    pub ulIVSizeInBits: CK_ULONG,
+    pub bIsExport: CK_BBOOL,
+    pub RandomInfo: CK_SSL3_RANDOM_DATA,
+    pub pReturnedKeyMaterial: *const CK_SSL3_KEY_MAT_OUT,
+}
+
+#[repr(C)]
+pub struct CK_TLS_PRF_PARAMS {
+    pub pSeed: *const CK_BYTE,
+    pub ulSeedLen: CK_ULONG,
+    pub pLabel: *const CK_BYTE,
+    pub ulLabelLen: CK_ULONG,
+    pub pOutput: *mut CK_BYTE,
+    pub pulOutputLen: *mut CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_WTLS_RANDOM_DATA {
+    pub pClientRandom: *const CK_BYTE,
+    pub ulClientRandomLen: CK_ULONG,
+    pub pServerRandom: *const CK_BYTE,
+    pub ulServerRandomLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_WTLS_MASTER_KEY_DERIVE_PARAMS {
+    pub DigestMechanism: CK_MECHANISM_TYPE,
+    pub RandomInfo: CK_WTLS_RANDOM_DATA,
+    pub pVersion: *const CK_BYTE
+}
+
+#[repr(C)]
+pub struct CK_WTLS_PRF_PARAMS {
+    pub DigestMechanism: CK_MECHANISM_TYPE,
+    pub pSeed: *const CK_BYTE,
+    pub ulSeedLen: CK_ULONG,
+    pub pLabel: *const CK_BYTE,
+    pub ulLabelLen: CK_ULONG,
+    pub pOutput: *mut CK_BYTE,
+    pub pulOutputLen: *mut CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_WTLS_KEY_MAT_OUT {
+    pub hMacSecret: CK_OBJECT_HANDLE,
+    pub hKey: CK_OBJECT_HANDLE,
+    pub pIV: *const CK_BYTE,
+}
+
+#[repr(C)]
+pub struct CK_WTLS_KEY_MAT_PARAMS {
+    pub DigestMechanism: CK_MECHANISM_TYPE,
+    pub ulMacSizeInBits: CK_ULONG,
+    pub ulKeySizeInBits: CK_ULONG,
+    pub ulIVSizeInBits: CK_ULONG,
+    pub ulSequenceNumber: CK_ULONG,
+    pub bIsExport: CK_BBOOL,
+    pub RandomInfo: CK_WTLS_RANDOM_DATA,
+    pub pReturnedKeyMaterial: *mut CK_WTLS_KEY_MAT_OUT,
+}
+
+#[repr(C)]
+pub struct CK_CMS_SIG_PARAMS {
+    pub certificateHandle: CK_OBJECT_HANDLE,
+    pub pSigningMechanism: *const CK_MECHANISM,
+    pub pDigestMechanism: *const CK_MECHANISM,
+    pub pContentType: *const CK_UTF8CHAR,
+    pub pRequestedAttributes: *const CK_BYTE,
+    pub ulRequestedAttributes: CK_ULONG,
+    pub pRequiredAttributes: *const CK_BYTE,
+    pub ulRequiredAttributesLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_KEY_DERIVATION_STRING_DATA {
+    pub pData: *const CK_BYTE,
+    pub ulLen: CK_ULONG,
+}
+
+/// Used for the CKM_EXTRACT_KEY_FROM_KEY mechanism.
+///
+/// It specifies which bit of the base key should be used as the first bit
+/// of the derived key.
+pub type CK_EXTRACT_PARAMS = CK_ULONG;
+
+/// Indicates the Pseudo-Random Function (PRF) used to generate key
+/// bits using PKCS #5 PBKDF2.
+pub type CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = CK_ULONG;
+
+pub const CKP_PKCS5_PBKD2_HMAC_SHA1:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000001;
+pub const CKP_PKCS5_PBKD2_HMAC_GOSTR3411:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000002;
+pub const CKP_PKCS5_PBKD2_HMAC_SHA224:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000003;
+pub const CKP_PKCS5_PBKD2_HMAC_SHA256:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000004;
+pub const CKP_PKCS5_PBKD2_HMAC_SHA384:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000005;
+pub const CKP_PKCS5_PBKD2_HMAC_SHA512:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000006;
+pub const CKP_PKCS5_PBKD2_HMAC_SHA512_224:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000007;
+pub const CKP_PKCS5_PBKD2_HMAC_SHA512_256:
+            CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE = 0x00000008;
+
+/// Indicates the source of the salt value when deriving a key using PKCS #5
+/// PBKDF2.
+pub type CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = CK_ULONG;
+
+pub const CKZ_SALT_SPECIFIED: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE = 0x00000001;
+
+/// Provides the parameters to the CKM_PKCS5_PBKD2 mechanism.
+#[repr(C)]
+pub struct CK_PKCS5_PBKD2_PARAMS {
+    pub saltSource: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE,
+    pub pSaltSourceData: *const CK_VOID,
+    pub ulSaltSourceDataLen: CK_ULONG,
+    pub iterations: CK_ULONG,
+    pub prf: CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE,
+    pub pPrfData: *const CK_VOID,
+    pub ulPrfDataLen: CK_ULONG,
+    pub pPassword: *const CK_UTF8CHAR,
+    pub ulPasswordLen: *const CK_ULONG,
+}
+
+/// The corrected version of `CK_PKCS5_PBKD2_PARAMS`.
+///
+/// Provides the parameters to the CKM_PKCS5_PBKD2 mechanism noting that the
+/// `ulPasswordLen` field is an integer value, not a pointer.
+#[repr(C)]
+pub struct CK_PKCS5_PBKD2_PARAMS2 {
+    pub saltSource: CK_PKCS5_PBKDF2_SALT_SOURCE_TYPE,
+    pub pSaltSourceData: *const CK_VOID,
+    pub ulSaltSourceDataLen: CK_ULONG,
+    pub iterations: CK_ULONG,
+    pub prf: CK_PKCS5_PBKD2_PSEUDO_RANDOM_FUNCTION_TYPE,
+    pub pPrfData: *const CK_VOID,
+    pub ulPrfDataLen: CK_ULONG,
+    pub pPassword: *const CK_UTF8CHAR,
+    pub ulPasswordLen: CK_ULONG,
+}
+
+pub type CK_OTP_PARAM_TYPE = CK_ULONG;
+pub type CK_PARAM_TYPE = CK_OTP_PARAM_TYPE;
+
+#[repr(C)]
+pub struct CK_OTP_PARAM {
+    pub paramType: CK_OTP_PARAM_TYPE,
+    pub pValue: *const CK_VOID,
+    pub ulValueLen: CK_ULONG
+}
+
+#[repr(C)]
+pub struct CK_OTP_PARAMS {
+    pub pParams: *const CK_OTP_PARAM,
+    pub ulCount: CK_ULONG
+}
+
+#[repr(C)]
+pub struct CK_OTP_SIGNATURE_INFO {
+    pub pParams: *const CK_OTP_PARAM,
+    pub ulCount: CK_ULONG,
+}
+
+pub const CK_OTP_VALUE        : CK_OTP_PARAM_TYPE =  0;
+pub const CK_OTP_PIN          : CK_OTP_PARAM_TYPE =  1;
+pub const CK_OTP_CHALLENGE    : CK_OTP_PARAM_TYPE =  2;
+pub const CK_OTP_TIME         : CK_OTP_PARAM_TYPE =  3;
+pub const CK_OTP_COUNTER      : CK_OTP_PARAM_TYPE =  4;
+pub const CK_OTP_FLAGS        : CK_OTP_PARAM_TYPE =  5;
+pub const CK_OTP_OUTPUT_LENGTH: CK_OTP_PARAM_TYPE =  6;
+pub const CK_OTP_OUTPUT_FORMAT: CK_OTP_PARAM_TYPE =  7;
+
+pub const CKF_NEXT_OTP          : CK_FLAGS = 0x00000001;
+pub const CKF_EXCLUDE_TIME      : CK_FLAGS = 0x00000002;
+pub const CKF_EXCLUDE_COUNTER   : CK_FLAGS = 0x00000004;
+pub const CKF_EXCLUDE_CHALLENGE : CK_FLAGS = 0x00000008;
+pub const CKF_EXCLUDE_PIN       : CK_FLAGS = 0x00000010;
+pub const CKF_USER_FRIENDLY_OTP : CK_FLAGS = 0x00000020;
+
+#[repr(C)]
+pub struct CK_KIP_PARAMS {
+    pub pMechanism: *const CK_MECHANISM,
+    pub hKey: CK_OBJECT_HANDLE,
+    pub pSee: *const CK_BYTE,
+    pub ulSeedLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_AES_CTR_PARAMS {
+    pub ulCounterBits: CK_ULONG,
+    pub cb: [CK_BYTE; 16],
+}
+
+#[repr(C)]
+pub struct CK_GCM_PARAMS {
+    pub pIv: *const CK_BYTE,
+    pub ulIvLen: CK_ULONG,
+    pub ulIvBits: CK_ULONG,
+    pub pAAD: *const CK_BYTE,
+    pub ulAADLen: CK_ULONG,
+    pub ulTagBit: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_CCM_PARAMS {
+    pub ulDataLen: CK_ULONG,
+    pub pNonce: *const CK_BYTE,
+    pub ulNonceLen: CK_ULONG,
+    pub pAAD: *const CK_BYTE,
+    pub ulAADLen: CK_ULONG,
+    pub ilMACLen: CK_ULONG,
+}
+
+/// Deprecated: Use `CK_GCM_PARAMS`.
+#[repr(C)]
+pub struct CK_AES_GCM_PARAMS {
+    pub pIv: *const CK_BYTE,
+    pub ulIvLen: CK_ULONG,
+    pub ulIvBits: CK_ULONG,
+    pub pAAD: *const CK_BYTE,
+    pub ulAADLen: CK_ULONG,
+    pub ulTagBits: CK_ULONG,
+}
+
+/// Deprecated: Use `CK_CCM_PARAMS`.
+#[repr(C)]
+pub struct CK_AES_CCM_PARAMS {
+    pub ulDataLen: CK_ULONG,
+    pub pNonce: *const CK_BYTE,
+    pub ulNonceLen: CK_ULONG,
+    pub pAAD: *const CK_BYTE,
+    pub ulAADLen: CK_ULONG,
+    pub ulMACLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_CAMELLIA_CTR_PARAMS {
+    pub ulCounterBits: CK_ULONG,
+    pub cb: [CK_BYTE; 16],
+}
+
+#[repr(C)]
+pub struct CK_CAMELLIA_CBC_ENCRYPT_DATA_PARAMS {
+    pub iv: [CK_BYTE; 16],
+    pub pData: *const CK_BYTE,
+    pub length: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_ARIA_CBC_ENCRYPT_DATA_PARAMS {
+    pub iv: [CK_BYTE; 16],
+    pub pData: *const CK_BYTE,
+    pub length: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_DSA_PARAMETER_GEN_PARAM {
+    pub hash: CK_MECHANISM_TYPE,
+    pub pSeed: *const CK_BYTE,
+    pub ulSeedLen: CK_ULONG,
+    pub ulIndex: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_ECDH_AES_KEY_WRAP_PARAMS {
+    pub ulAESKeyBits: CK_ULONG,
+    pub kdf: CK_EC_KDF_TYPE,
+    pub ulSharedDataLen: CK_ULONG,
+    pub pSharedData: *const CK_BYTE,
+}
+
+pub type CK_JAVA_MIDP_SECURITY_DOMAIN = CK_ULONG;
+
+#[repr(C)]
+pub struct CK_RSA_AES_KEY_WRAP_PARAMS {
+    pub ulAESKeyBits: CK_ULONG,
+    pub pOAEPParams: *const CK_RSA_PKCS_OAEP_PARAMS,
+}
+
+#[repr(C)]
+pub struct CK_TLS12_MASTER_KEY_DERIVE_PARAMS {
+    pub RandomInfo: CK_SSL3_RANDOM_DATA,
+    pub pVersion: *const CK_VERSION,
+    pub prfHashMechanism: CK_MECHANISM_TYPE,
+}
+
+#[repr(C)]
+pub struct CK_TLS12_KEY_MAT_PARAMS {
+    pub ulMacSizeInBits: CK_ULONG,
+    pub ulKeySizeInBits: CK_ULONG,
+    pub ulIVSizeInBits: CK_ULONG,
+    pub bIsExport: CK_BBOOL,
+    pub RandomInfo: CK_SSL3_RANDOM_DATA,
+    pub pReturnedKeyMaterial: *const CK_SSL3_KEY_MAT_OUT,
+    pub prfHashMechanism: CK_MECHANISM_TYPE,
+}
+
+#[repr(C)]
+pub struct CK_TLS_KDF_PARAMS {
+    pub prfMechanism: CK_MECHANISM_TYPE,
+    pub pLabel: *const CK_BYTE,
+    pub ulLabelLength: CK_ULONG,
+    pub RandomInfo: CK_SSL3_RANDOM_DATA,
+    pub pContextData: *const CK_BYTE,
+    pub ulContextDataLength: CK_ULONG
+}
+
+#[repr(C)]
+pub struct CK_TLS_MAC_PARAMS {
+    pub prfHashMechanism: CK_MECHANISM_TYPE,
+    pub ulMacLength: CK_ULONG,
+    pub ulServerOrClient: CK_ULONG
+}
+
+#[repr(C)]
+pub struct CK_GOSTR3410_DERIVE_PARAMS {
+    pub kdf: CK_EC_KDF_TYPE,
+    pub pPublicData: *const CK_BYTE,
+    pub ulPublicDataLen: CK_ULONG,
+    pub pUKM: *const CK_BYTE,
+    pub ulUKMLen: CK_ULONG,
+}
+
+#[repr(C)]
+pub struct CK_GOSTR3410_KEY_WRAP_PARAMS {
+    pub pWrapOID: *const CK_BYTE,
+    pub ulWrapOIDLen: CK_ULONG,
+    pub pUKM: *const CK_BYTE,
+    pub ulUKMLen: CK_ULONG,
+    pub hKey: CK_OBJECT_HANDLE,
+}
+
+#[repr(C)]
+pub struct CK_SEED_CBC_ENCRYPT_DATA_PARAMS {
+    pub iv: [CK_BYTE; 16],
+    pub pData: *const CK_BYTE,
+    pub length: CK_ULONG,
+}
 
 
 //------------ pkcs11f.h ----------------------------------------------------
@@ -2028,7 +2381,7 @@ pkcs11_functions!{
         ulWrappedKeyLen: CK_ULONG,
         pTemplate: *const CK_ATTRIBUTE,
         ulAttributeCount: CK_ULONG,
-        phKey: *mut CK_OJECT_HANDLE
+        phKey: *mut CK_OBJECT_HANDLE
     );
 
     /// Derives a key from a base key, creating a new key object.
@@ -2038,7 +2391,7 @@ pkcs11_functions!{
         hBaseKey: CK_OBJECT_HANDLE,
         pTemplate: *const CK_ATTRIBUTE,
         ulAttributeCount: CK_ULONG,
-        phKey: *mut CK_OJECT_HANDLE
+        phKey: *mut CK_OBJECT_HANDLE
     );
 
 
