@@ -1132,34 +1132,31 @@ pub const CKR_VENDOR_DEFINED                    : CK_RV = 0x80000000;
 
 
 /// An application callback that processes events.
-pub type CK_NOTIFY = unsafe extern "C" fn(hSession: CK_SESSION_HANDLE,
-                                          event: CK_NOTIFICATION,
-                                          pApplication: *const CK_VOID)
-                                          -> CK_RV;
+pub type CK_NOTIFY = extern "C" fn(hSession: CK_SESSION_HANDLE,
+                                   event: CK_NOTIFICATION,
+                                   pApplication: *const CK_VOID)
+                                   -> CK_RV;
 
 /// An application callback for creating a mutex object.
-pub type CK_CREATEMUTEX = unsafe extern "C" fn(ppMutex: *mut *const CK_VOID)
-                                               -> CK_RV;
+pub type CK_CREATEMUTEX = extern "C" fn(ppMutex: *mut *const CK_VOID)
+                                        -> CK_RV;
 
 /// An application callback for destroying a mutex object.
-pub type CK_DESTROYMUTEX = unsafe extern "C" fn(pMutex: *const CK_VOID)
-                                                -> CK_RV;
+pub type CK_DESTROYMUTEX = extern "C" fn(pMutex: *const CK_VOID) -> CK_RV;
 
 /// An application callback for locking a mutex.
-pub type CK_LOCKMUTEX = unsafe extern "C" fn(pMutex: *const CK_VOID)
-                                             -> CK_RV;
+pub type CK_LOCKMUTEX = extern "C" fn(pMutex: *const CK_VOID) -> CK_RV;
 
 /// An application callback for unlocking a mutex.
-pub type CK_UNLOCKMUTEX = unsafe extern "C" fn(pMutex: *const CK_VOID)
-                                               -> CK_RV;
+pub type CK_UNLOCKMUTEX = extern "C" fn(pMutex: *const CK_VOID) -> CK_RV;
 
 /// The optional arguments to `C_Initialize`.
 #[repr(C)]
 pub struct CK_C_INITIALIZE_ARGS {
-    pub CreateMutex: CK_CREATEMUTEX,
-    pub DestroyMutex: CK_DESTROYMUTEX,
-    pub LockMutex: CK_LOCKMUTEX,
-    pub UnlockMutex: CK_UNLOCKMUTEX,
+    pub CreateMutex: Option<CK_CREATEMUTEX>,
+    pub DestroyMutex: Option<CK_DESTROYMUTEX>,
+    pub LockMutex: Option<CK_LOCKMUTEX>,
+    pub UnlockMutex: Option<CK_UNLOCKMUTEX>,
     pub flags: CK_FLAGS,
     pub pReserved: *const CK_VOID,
 }
