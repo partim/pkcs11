@@ -48,7 +48,10 @@ impl Cryptoki {
     pub fn initialize(&self, args: Option<sys::CK_C_INITIALIZE_ARGS>)
                       -> Result<()> {
         unsafe {
-            let args_ptr = mem::transmute(&args);
+            let args_ptr = match args {
+                Some(args) => mem::transmute(&args),
+                None => ptr::null()
+            };
             let res = ((*self.ck).C_Initialize)(args_ptr);
             // Getting "already initialized" is fine. We can use the same
             // module more than once ...
