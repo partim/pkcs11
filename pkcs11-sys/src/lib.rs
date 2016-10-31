@@ -2314,8 +2314,8 @@ pkcs11_functions!{
     /// Continues a multiple-part decryption and digesting operation.
     CK_PKCS11_FUNCTION_INFO(C_DecryptDigestUpdate, CK_C_DecryptDigestUpdate)(
         hSession: CK_SESSION_HANDLE,
-        pEncryptedData: *const CK_BYTE,
-        ulEncryptedDataLen: CK_ULONG,
+        pEncryptedPart: *const CK_BYTE,
+        ulEncryptedPartLen: CK_ULONG,
         pPart: *mut CK_BYTE,
         pulPartLen: *mut CK_ULONG
     );
@@ -2332,8 +2332,8 @@ pkcs11_functions!{
     /// Continues a multiple-part decryption and verify operation.
     CK_PKCS11_FUNCTION_INFO(C_DecryptVerifyUpdate, CK_C_DecryptVerifyUpdate)(
         hSession: CK_SESSION_HANDLE,
-        pEncryptedData: *const CK_BYTE,
-        ulEncryptedDataLen: CK_ULONG,
+        pEncryptedPart: *const CK_BYTE,
+        ulEncryptedPartLen: CK_ULONG,
         pPart: *mut CK_BYTE,
         pulPartLen: *mut CK_ULONG
     );
