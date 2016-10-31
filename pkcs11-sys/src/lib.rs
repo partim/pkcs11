@@ -8,6 +8,8 @@
 
 extern crate libc;
 
+use std::{fmt, mem, ptr};
+
 
 //------------ pkcs11t.h -----------------------------------------------------
 
@@ -48,6 +50,7 @@ pub type CK_VOID = libc::c_void;
 pub const CK_INVALID_HANDLE: CK_ULONG = 0;
 
 #[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CK_VERSION {
     /// Integer portion of version number.
     pub major: CK_BYTE,
@@ -57,6 +60,7 @@ pub struct CK_VERSION {
 }
 
 #[repr(C)]
+#[derive(Clone, Debug, Default)]
 pub struct CK_INFO {
     /// Cryptoki interface ver.
     pub cryptokiVersion: CK_VERSION,
@@ -73,6 +77,7 @@ pub struct CK_INFO {
     /// version of library
     pub libraryVersion: CK_VERSION,
 }
+
 
 /// Enumerates type tyes of notifications that Cryptoki provides to an
 /// application.
@@ -98,6 +103,42 @@ pub struct CK_SLOT_INFO {
     pub firmwareVersion: CK_VERSION
 }
 
+impl Clone for CK_SLOT_INFO {
+    fn clone(&self) -> Self {
+        // XXX Is there really no safe way to do this quickly?
+        unsafe {
+            let mut res = mem::uninitialized();
+            ptr::copy(self, &mut res, 1);
+            res
+        }
+    }
+}
+
+impl fmt::Debug for CK_SLOT_INFO {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CK_SLOT_INFO")
+            .field("slotDescription",
+                   &String::from_utf8_lossy(&self.slotDescription[..]))
+            .field("manufacturerID",
+                   &String::from_utf8_lossy(&self.manufacturerID[..]))
+            .field("flags", &self.flags)
+            .field("hardwareVersion", &self.hardwareVersion)
+            .field("firmwareVersion", &self.firmwareVersion)
+            .finish()
+    }
+}
+
+impl Default for CK_SLOT_INFO {
+    fn default() -> Self {
+        CK_SLOT_INFO {
+            slotDescription: [b' '; 64], manufacturerID: [b' '; 32],
+            flags: 0, hardwareVersion: CK_VERSION::default(),
+            firmwareVersion: CK_VERSION::default()
+        }
+    }
+}
+
+
 // Flags for CK_SLOT_INFO.flags
 
 /// A token is there.
@@ -111,6 +152,7 @@ pub const CKF_HW_SLOW: CK_FLAGS = 4;
 
 /// Provides information about a token.
 #[repr(C)]
+#[derive(Default)]
 pub struct CK_TOKEN_INFO {
     /// Blank padded.
     pub label: [CK_UTF8CHAR; 32],

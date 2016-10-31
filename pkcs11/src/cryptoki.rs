@@ -2,6 +2,7 @@
 #![allow(dead_code)] // XXX for now ...
 
 use std::{io, mem, ptr};
+use std::sync::Arc;
 use libloading::{Library, Symbol};
 use pkcs11_sys as sys;
 use super::error::{Error, Result};
@@ -9,9 +10,18 @@ use super::error::{Error, Result};
 
 //------------ Cryptoki ------------------------------------------------------
 
+#[derive(Clone)]
 pub struct Cryptoki {
+    /// The library this Cryptoki implementation came from.
+    ///
+    /// We only hold onto it here so that it doesn’t get unloaded while we
+    /// need it. Normally, we would keep the `Symbol` loaded from it, but we
+    /// only need that to get the function list. So we rather keep the
+    /// library and the raw function list.
     #[allow(dead_code)]
-    library: Library,
+    library: Arc<Library>,
+
+    /// The function list retrieved from the library.
     ck: *const sys::CK_FUNCTION_LIST,
 }
 
@@ -29,7 +39,7 @@ impl<'a> Cryptoki {
             }
             list
         };
-        Ok(Cryptoki{library: lib, ck: ck})
+        Ok(Cryptoki{library: Arc::new(lib), ck: ck})
     }
 }
 
@@ -69,17 +79,15 @@ impl Cryptoki {
         })
     }
 
-    pub fn get_info(&self) -> Result<sys::CK_INFO> {
+    pub fn get_info(&self, info: &mut sys::CK_INFO) -> Result<()> {
         Ok(unsafe {
-            let mut info = mem::zeroed();
-            call_ck!(self.C_GetInfo(&mut info));
-            info
+            call_ck!(self.C_GetInfo(info));
         })
     }
 
-    fn get_slot_list(&self, token_present: bool,
-                     slot_list: Option<&mut [sys::CK_SLOT_ID]>)
-                       -> Result<usize> {
+    pub fn get_slot_list(&self, token_present: bool,
+                         slot_list: Option<&mut [sys::CK_SLOT_ID]>)
+                         -> Result<usize> {
         let token_present = if token_present { sys::CK_TRUE }
                             else { sys::CK_FALSE };
         Ok(unsafe {
@@ -91,21 +99,19 @@ impl Cryptoki {
         })
     }
 
-    pub fn get_slot_info(&self, slot_id: sys::CK_SLOT_ID)
-                       -> Result<sys::CK_SLOT_INFO> {
+    pub fn get_slot_info(&self, slot_id: sys::CK_SLOT_ID,
+                         info: &mut sys::CK_SLOT_INFO)
+                       -> Result<()> {
         Ok(unsafe {
-            let mut info = mem::zeroed();
-            call_ck!(self.C_GetSlotInfo(slot_id, &mut info));
-            info
+            call_ck!(self.C_GetSlotInfo(slot_id, info));
         })
     }
 
-    pub fn get_token_info(&self, slot_id: sys::CK_SLOT_ID)
-                        -> Result<sys::CK_TOKEN_INFO> {
+    pub fn get_token_info(&self, slot_id: sys::CK_SLOT_ID,
+                          info: &mut sys::CK_TOKEN_INFO)
+                        -> Result<()> {
         Ok(unsafe {
-            let mut info = mem::zeroed();
-            call_ck!(self.C_GetTokenInfo(slot_id, &mut info));
-            info
+            call_ck!(self.C_GetTokenInfo(slot_id, info));
         })
     }
 
