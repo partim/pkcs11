@@ -1,20 +1,35 @@
 //! Safe wrappers for the Cryptoki API.
 #![allow(dead_code)] // XXX for now ...
 
-use std::{mem, ptr};
+use std::{io, mem, ptr};
+use libloading::{Library, Symbol};
 use pkcs11_sys as sys;
-use super::error::Result;
+use super::error::{Error, Result};
 
 
 //------------ Cryptoki ------------------------------------------------------
 
 pub struct Cryptoki {
-    ck: *const sys::CK_FUNCTION_LIST
+    #[allow(dead_code)]
+    library: Library,
+    ck: *const sys::CK_FUNCTION_LIST,
 }
 
-impl Cryptoki {
-    pub fn new(ck: *const sys::CK_FUNCTION_LIST) -> Self {
-        Cryptoki{ck: ck}
+impl<'a> Cryptoki {
+    pub fn new(lib: Library) -> io::Result<Self> {
+        let ck = unsafe {
+            let get_list: Symbol<sys::CK_C_GetFunctionList> =
+                try!(lib.get(b"C_GetFunctionList"));
+            let mut list = ptr::null();
+            let res = get_list(&mut list);
+            if res != sys::CKR_OK {
+                return Err(io::Error::new(io::ErrorKind::Other,
+                                          ::std::error::Error::description(
+                                                &Error::from(res))))
+            }
+            list
+        };
+        Ok(Cryptoki{library: lib, ck: ck})
     }
 }
 
