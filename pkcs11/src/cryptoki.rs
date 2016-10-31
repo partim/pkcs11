@@ -165,7 +165,8 @@ impl Cryptoki {
     }
 
     pub fn open_session(&self, slot_id: sys::CK_SLOT_ID, flags: sys::CK_FLAGS,
-                        app: *const sys::CK_VOID, notify: sys::CK_NOTIFY)
+                        app: *const sys::CK_VOID,
+                        notify: Option<sys::CK_NOTIFY>)
                         -> Result<sys::CK_SESSION_HANDLE> {
         Ok(unsafe {
             let mut handle = 0;

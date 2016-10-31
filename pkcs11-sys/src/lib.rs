@@ -1990,7 +1990,7 @@ pkcs11_functions!{
         slotID: CK_SLOT_ID,
         flags: CK_FLAGS,
         pApplication: *const CK_VOID,
-        Notify: CK_NOTIFY,
+        Notify: Option<CK_NOTIFY>,
         phSession: *mut CK_SESSION_HANDLE
     );
 
