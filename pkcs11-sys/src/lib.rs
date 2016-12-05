@@ -35,6 +35,13 @@ pub type CK_BBOOL = CK_BYTE;
 /// An unsigned value, at least 32 bits long.
 pub type CK_ULONG = libc::c_ulong;
 
+/// Helper constant to state the maximum size of a CK_ULONG.
+///
+/// This is not part of the PKCS#11 API.
+//
+// XXX Is this even correct?
+pub const CK_ULONG_MAX: CK_ULONG = !0;
+
 /// A signed value, the same size as a `CK_ULONG`.
 pub type CK_LONG = libc::c_long;
 
@@ -426,6 +433,8 @@ pub const CKK_VENDOR_DEFINED      : CK_KEY_TYPE = 0x80000000;
 
 /// Identifies a certificate type.
 pub type CK_CERTIFICATE_TYPE = CK_ULONG;
+
+pub type CK_CERTIFICATE_CATEGORY = CK_ULONG;
 
 pub const CK_CERTIFICATE_CATEGORY_UNSPECIFIED : CK_ULONG = 0;
 pub const CK_CERTIFICATE_CATEGORY_TOKEN_USER  : CK_ULONG = 1;
@@ -1013,6 +1022,7 @@ pub struct CK_MECHANISM {
 
 /// Provides information about a partiuclar mechanism
 #[repr(C)]
+#[derive(Clone, Default, Debug)]
 pub struct CK_MECHANISM_INFO {
     pub ulMinKeySize: CK_ULONG,
     pub ulMaxKeySize: CK_ULONG,
@@ -1023,7 +1033,7 @@ pub struct CK_MECHANISM_INFO {
 /// Performed by hardware.
 pub const CKF_HW: CK_FLAGS = 0x00000001;
 
-// Specify whether or not a mechanism cna be used for a task:
+// Specify whether or not a mechanism can be used for a task:
 pub const CKF_ENCRYPT            : CK_FLAGS = 0x00000100;
 pub const CKF_DECRYPT            : CK_FLAGS = 0x00000200;
 pub const CKF_DIGEST             : CK_FLAGS = 0x00000400;

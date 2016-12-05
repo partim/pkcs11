@@ -2,6 +2,7 @@
 #![allow(dead_code)] // XXX for now ...
 
 use std::{io, mem, ptr};
+use std::marker::PhantomData;
 use std::sync::Arc;
 use libloading::{Library, Symbol};
 use pkcs11_sys as sys;
@@ -95,7 +96,7 @@ impl Cryptoki {
             call_ck!(self.C_GetSlotList(token_present,
                                         opt_mut_ptr(slot_list),
                                         &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -123,26 +124,26 @@ impl Cryptoki {
             call_ck!(self.C_GetMechanismList(slot_id,
                                              opt_mut_ptr(list),
                                              &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
     pub fn get_mechanism_info(&self, slot_id: sys::CK_SLOT_ID,
-                            mechanism: sys::CK_MECHANISM_TYPE)
-                            -> Result<sys::CK_MECHANISM_INFO> {
+                              mechanism: sys::CK_MECHANISM_TYPE,
+                              info: &mut sys::CK_MECHANISM_INFO)
+                              -> Result<()> {
         Ok(unsafe {
-            let mut info = mem::zeroed();
-            call_ck!(self.C_GetMechanismInfo(slot_id, mechanism, &mut info));
-            info
+            call_ck!(self.C_GetMechanismInfo(slot_id, mechanism, info));
         })
     }
 
-    /// pin can be any length, label must be exactly 32 bytes long. The
-    /// method panics if it isn’t.
+    /// pin can be any length, label must be exactly 32 bytes long. Returns
+    /// `CKR_ARGUMENTS_BAD` if it isn’t.
     pub fn init_token(&self, slot_id: sys::CK_SLOT_ID, pin: &str,
                     label: &str) -> Result<()> {
-        assert!(label.as_bytes().len() != 32,
-                "token label must be exactly 32 bytes long");
+        if label.as_bytes().len() != 32 {
+            return Err(sys::CKR_ARGUMENTS_BAD.into())
+        }
         Ok(unsafe {
             call_ck!(self.C_InitToken(slot_id, pin.as_ptr(), ck_len(pin),
                                       label.as_ptr()))
@@ -200,7 +201,7 @@ impl Cryptoki {
             let mut res = opt_len(&state);
             call_ck!(self.C_GetOperationState(session, opt_mut_ptr(state),
                                               &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -227,24 +228,25 @@ impl Cryptoki {
         Ok(unsafe { call_ck!(self.C_Logout(session)) })
     }
 
-    pub fn create_object(&self, session: sys::CK_SESSION_HANDLE,
-                         template: &Template)
-                         -> Result<sys::CK_OBJECT_HANDLE> {
+    pub fn create_object<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                                template: T) -> Result<sys::CK_OBJECT_HANDLE>
+                         where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
-            call_ck!(self.C_CreateObject(session, template.ptr(),
-                                         template.len(), &mut res));
+            let (ptr, len) = translate_template(template);
+            call_ck!(self.C_CreateObject(session, ptr, len, &mut res));
             res
         })
     }
 
-    pub fn copy_object(&self, session: sys::CK_SESSION_HANDLE,
-                       object: sys::CK_OBJECT_HANDLE, template: &Template)
-                       -> Result<sys::CK_OBJECT_HANDLE> {
+    pub fn copy_object<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                              object: sys::CK_OBJECT_HANDLE, template: T)
+                              -> Result<sys::CK_OBJECT_HANDLE> 
+                       where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
-            call_ck!(self.C_CopyObject(session, object, template.ptr(),
-                                       template.len(), &mut res));
+            let (ptr, len) = translate_template(template);
+            call_ck!(self.C_CopyObject(session, object, ptr, len, &mut res));
             res
         })
     }
@@ -264,28 +266,35 @@ impl Cryptoki {
         })
     }
 
-    /*
-    pub fn get_attribute_value(&self, ...) -> Result<()> {
-        unimplemented!()
-    }
-    */
-
-    pub fn set_attribute_value(&self, session: sys::CK_SESSION_HANDLE,
-                               object: sys::CK_OBJECT_HANDLE,
-                               template: &Template)
-                               -> Result<()> {
+    pub fn get_attribute_value<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                                      object: sys::CK_OBJECT_HANDLE,
+                                      mut template: T) -> Result<()>
+                               where T: AsMut<[Attribute<'a>]> {
         Ok(unsafe {
-            call_ck!(self.C_SetAttributeValue(session, object,
-                                              template.ptr(),
-                                              template.len()))
+            let template: &mut [sys::CK_ATTRIBUTE]
+                = mem::transmute(template.as_mut());
+            call_ck!(self.C_GetAttributeValue(session, object,
+                                              template.as_mut_ptr(),
+                                              ck_len(template)))
         })
     }
 
-    pub fn find_objects_init(&self, session: sys::CK_SESSION_HANDLE,
-                             template: &Template) -> Result<()> {
+    pub fn set_attribute_value<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                                      object: sys::CK_OBJECT_HANDLE,
+                                      template: T) -> Result<()>
+                               where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
-            call_ck!(self.C_FindObjectsInit(session, template.ptr(),
-                                            template.len()))
+            let (ptr, len) = translate_template(template);
+            call_ck!(self.C_SetAttributeValue(session, object, ptr, len))
+        })
+    }
+
+    pub fn find_objects_init<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                                    template: T) -> Result<()>
+                             where T: AsRef<[Attribute<'a>]> {
+        Ok(unsafe {
+            let (ptr, len) = translate_template(template);
+            call_ck!(self.C_FindObjectsInit(session, ptr, len))
         })
     }
 
@@ -296,7 +305,7 @@ impl Cryptoki {
             let mut res = 0;
             call_ck!(self.C_FindObjects(session, buf.as_mut_ptr(),
                                         ck_len(buf), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -322,7 +331,7 @@ impl Cryptoki {
             let mut res = opt_len(&encrypted_data);
             call_ck!(self.C_Encrypt(session, data.as_ptr(), ck_len(data),
                                     opt_mut_ptr(encrypted_data), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -335,7 +344,7 @@ impl Cryptoki {
                                           ck_len(part),
                                           opt_mut_ptr(encrypted_part),
                                           &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -347,7 +356,7 @@ impl Cryptoki {
             call_ck!(self.C_EncryptFinal(session,
                                          opt_mut_ptr(last_encrypted_part),
                                          &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -365,7 +374,7 @@ impl Cryptoki {
             call_ck!(self.C_Decrypt(session, encrypted_data.as_ptr(),
                                     ck_len(encrypted_data),
                                     opt_mut_ptr(data), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -377,7 +386,7 @@ impl Cryptoki {
             call_ck!(self.C_DecryptUpdate(session, encrypted_part.as_ptr(),
                                           ck_len(encrypted_part),
                                           opt_mut_ptr(part), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -387,7 +396,7 @@ impl Cryptoki {
             let mut res = opt_len(&last_part);
             call_ck!(self.C_DecryptFinal(session, opt_mut_ptr(last_part),
                                          &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -404,7 +413,7 @@ impl Cryptoki {
             let mut res = opt_len(&digest);
             call_ck!(self.C_Digest(session, data.as_ptr(), ck_len(data),
                                    opt_mut_ptr(digest), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -427,7 +436,7 @@ impl Cryptoki {
             let mut res = opt_len(&digest);
             call_ck!(self.C_DigestFinal(session, opt_mut_ptr(digest),
                                         &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -443,7 +452,7 @@ impl Cryptoki {
             let mut res = opt_len(&signature);
             call_ck!(self.C_Sign(session, data.as_ptr(), ck_len(data),
                                  opt_mut_ptr(signature), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -460,7 +469,7 @@ impl Cryptoki {
             let mut res = opt_len(&signature);
             call_ck!(self.C_SignFinal(session, opt_mut_ptr(signature),
                                       &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -479,7 +488,7 @@ impl Cryptoki {
             let mut res = opt_len(&signature);
             call_ck!(self.C_SignRecover(session, data.as_ptr(), ck_len(data),
                                         opt_mut_ptr(signature), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -530,7 +539,7 @@ impl Cryptoki {
             call_ck!(self.C_VerifyRecover(session, signature.as_ptr(),
                                           ck_len(signature),
                                           opt_mut_ptr(data), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -544,7 +553,7 @@ impl Cryptoki {
                                                 ck_len(part),
                                                 opt_mut_ptr(encrypted_part),
                                                 &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -557,7 +566,7 @@ impl Cryptoki {
                                                 encrypted_part.as_ptr(),
                                                 ck_len(encrypted_part),
                                                 opt_mut_ptr(part), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -571,7 +580,7 @@ impl Cryptoki {
                                               ck_len(part),
                                               opt_mut_ptr(encrypted_part),
                                               &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
@@ -584,35 +593,39 @@ impl Cryptoki {
                                                 encrypted_part.as_ptr(),
                                                 ck_len(encrypted_part),
                                                 opt_mut_ptr(part), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
-    pub fn generate_key(&self, session: sys::CK_SESSION_HANDLE,
-                        mechanism: &sys::CK_MECHANISM, template: &Template)
-                        -> Result<sys::CK_OBJECT_HANDLE> {
+    pub fn generate_key<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                               mechanism: &sys::CK_MECHANISM, template: T)
+                               -> Result<sys::CK_OBJECT_HANDLE>
+                        where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
-            call_ck!(self.C_GenerateKey(session, mechanism, template.ptr(),
-                                        template.len(), &mut res));
+            let (ptr, len) = translate_template(template);
+            call_ck!(self.C_GenerateKey(session, mechanism, ptr, len,
+                                        &mut res));
             res
         })
     }
 
     /// Returns (public, private).
-    pub fn generate_key_pair(&self, session: sys::CK_SESSION_HANDLE,
-                             mechanism: &sys::CK_MECHANISM,
-                             public_key_template: &Template,
-                             private_key_template: &Template)
-                             -> Result<(sys::CK_OBJECT_HANDLE,
-                                        sys::CK_OBJECT_HANDLE)> {
+    pub fn generate_key_pair<'a, T, U>(&self, session: sys::CK_SESSION_HANDLE,
+                                       mechanism: &sys::CK_MECHANISM,
+                                       public_key_template: T,
+                                       private_key_template: U)
+                                       -> Result<(sys::CK_OBJECT_HANDLE,
+                                                  sys::CK_OBJECT_HANDLE)>
+                             where T: AsRef<[Attribute<'a>]>,
+                                   U: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = (0, 0);
+            let (pub_ptr, pub_len) = translate_template(public_key_template);
+            let (prv_ptr, prv_len) = translate_template(private_key_template);
             call_ck!(self.C_GenerateKeyPair(session, mechanism,
-                                            public_key_template.ptr(),
-                                            public_key_template.len(),
-                                            private_key_template.ptr(),
-                                            private_key_template.len(),
+                                            pub_ptr, pub_len,
+                                            prv_ptr, prv_len,
                                             &mut res.0, &mut res.1));
             res
         })
@@ -627,34 +640,37 @@ impl Cryptoki {
             let mut res = opt_len(&wrapped_key);
             call_ck!(self.C_WrapKey(session, mechanism, wrapping_key, key,
                                     opt_mut_ptr(wrapped_key), &mut res));
-            ck_unlen(res)
+            from_ck_long(res)
         })
     }
 
-    pub fn unwrap_key(&self, session: sys::CK_SESSION_HANDLE,
-                      mechanism: &sys::CK_MECHANISM,
-                      unwrapping_key: sys::CK_OBJECT_HANDLE,
-                      wrapped_key: &[u8], template: &Template)
-                      -> Result<sys::CK_OBJECT_HANDLE> {
+    pub fn unwrap_key<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                             mechanism: &sys::CK_MECHANISM,
+                             unwrapping_key: sys::CK_OBJECT_HANDLE,
+                             wrapped_key: &[u8], template: T)
+                             -> Result<sys::CK_OBJECT_HANDLE>
+                      where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
+            let (ptr, len) = translate_template(template);
             call_ck!(self.C_UnwrapKey(session, mechanism, unwrapping_key,
                                       wrapped_key.as_ptr(),
-                                      ck_len(wrapped_key), template.ptr(),
-                                      template.len(), &mut res));
+                                      ck_len(wrapped_key), ptr, len,
+                                      &mut res));
             res
         })
     }
 
-    pub fn derive_key(&self, session: sys::CK_SESSION_HANDLE,
-                      mechanism: &sys::CK_MECHANISM,
-                      base_key: sys::CK_OBJECT_HANDLE, template: &Template)
-                      -> Result<sys::CK_OBJECT_HANDLE> {
+    pub fn derive_key<'a, T>(&self, session: sys::CK_SESSION_HANDLE,
+                             mechanism: &sys::CK_MECHANISM,
+                             base_key: sys::CK_OBJECT_HANDLE, template: T)
+                             -> Result<sys::CK_OBJECT_HANDLE>
+                      where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
+            let (ptr, len) = translate_template(template);
             call_ck!(self.C_DeriveKey(session, mechanism, base_key,
-                                      template.ptr(), template.len(),
-                                      &mut res));
+                                      ptr, len, &mut res));
             res
         })
     }
@@ -675,18 +691,38 @@ impl Cryptoki {
     }
 }
 
-fn ck_len<T, R: AsRef<[T]> + ?Sized>(r: &R) -> sys::CK_ULONG {
-    // XXX Behave correctly if the sizes of CK_ULONG and usize differ.
-    r.as_ref().len() as sys::CK_ULONG
+fn ck_len<T, R: AsRef<[T]>>(r: R) -> sys::CK_ULONG {
+    to_ck_long(r.as_ref().len())
 }
 
-fn ck_unlen(v: sys::CK_ULONG) -> usize {
-    // XXX Behave correctly if the sizes of CK_ULONG and usize differ.
-    v as usize
+
+/// Converts a `usize` to a `CK_ULONG`.
+///
+/// # Panics 
+///
+/// On some targets (such as 64 bit Windows), `CK_ULONG` is 32 bits while
+/// `usize` is 64 bits. On these systems, the function will panic if given
+/// a value that is too large.
+#[inline(always)]
+pub fn to_ck_long(x: usize) -> sys::CK_ULONG {
+    // XXX Does this get optimized away if both types are identical?
+    assert!(x <= sys::CK_ULONG_MAX as usize);
+    x as sys::CK_ULONG
+}
+
+/// Converts a `CK_ULONG` into a `usize`.
+///
+/// # Assumption
+///
+/// Since `CK_ULONG` is equal to C’s `unsigned long int`, it should never
+/// be bigger than the target’s pointer size and a cast should be safe.
+#[inline(always)]
+pub fn from_ck_long(x: sys::CK_ULONG) -> usize {
+    x as usize
 }
 
 unsafe fn ck_void_ptr<T, R: AsRef<[T]>>(r: R) -> *const sys::CK_VOID {
-    mem::transmute(r.as_ref().as_ptr())
+    r.as_ref().as_ptr() as *const _
 }
 
 fn opt_len<T, R: AsRef<[T]>>(r: &Option<R>) -> sys::CK_ULONG {
@@ -710,36 +746,51 @@ fn opt_mut_ptr<T, R: AsMut<[T]>>(r: Option<R>) -> *mut T {
     }
 }
 
-
-//------------ Template ------------------------------------------------------
-
-pub struct Template<'a> {
-    inner: Vec<sys::CK_ATTRIBUTE>,
-    marker: ::std::marker::PhantomData<&'a sys::CK_ATTRIBUTE>,
+unsafe fn translate_template<'a, T>(t: T) -> (*const sys::CK_ATTRIBUTE,
+                                              sys::CK_ULONG)
+                             where T: AsRef<[Attribute<'a>]> {
+    let template: &[sys::CK_ATTRIBUTE] = mem::transmute(t.as_ref());
+    (template.as_ptr(), ck_len(template))
 }
 
-impl<'a> Template<'a> {
-    pub fn new() -> Self {
-        Template{inner: Vec::new(), marker: ::std::marker::PhantomData}
+
+//------------ Attribute ----------------------------------------------------
+
+pub struct Attribute<'a> {
+    inner: sys::CK_ATTRIBUTE,
+    marker: PhantomData<&'a u8>,
+}
+
+impl<'a> Attribute<'a> {
+    fn new<T: ?Sized>(attr: sys::CK_ATTRIBUTE_TYPE, ptr: *const T, len: usize)
+                      -> Self {
+        Attribute {
+            inner: sys::CK_ATTRIBUTE {
+                aType: attr,
+                pValue: ptr as *const _,
+                ulValueLen: to_ck_long(len)
+            },
+            marker: PhantomData
+        }
     }
 
-    pub fn push(&mut self, attr_type: sys::CK_ATTRIBUTE_TYPE,
-                attr_data: &'a [u8]) {
-        self.inner.push(
-            sys::CK_ATTRIBUTE {
-                aType: attr_type,
-                pValue: attr_data.as_ptr() as *const sys::CK_VOID,
-                ulValueLen: ck_len(attr_data),
-            }
-        )
+    pub fn from_ref<T>(attr: sys::CK_ATTRIBUTE_TYPE, val: &'a T) -> Self {
+        Self::new(attr, val, mem::size_of::<T>())
     }
 
-    fn ptr(&self) -> *const sys::CK_ATTRIBUTE {
-        self.inner.as_ptr()
+    pub fn from_bytes(attr: sys::CK_ATTRIBUTE_TYPE, value: &'a [u8]) -> Self {
+        Self::new(attr, value.as_ptr(), value.len())
     }
 
-    fn len(&self) -> sys::CK_ULONG {
-        ck_len(&self.inner)
+    pub fn from_bool(attr: sys::CK_ATTRIBUTE_TYPE, value: bool) -> Self {
+        Self::from_ref(attr, if value { &TRUE_VALUE }
+                             else { &FALSE_VALUE })
     }
 }
+
+
+// Statics for making boolean attributes on the fly.
+//
+static TRUE_VALUE: sys::CK_BBOOL = sys::CK_TRUE;
+static FALSE_VALUE: sys::CK_BBOOL = sys::CK_FALSE;
 
