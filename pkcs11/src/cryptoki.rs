@@ -1,7 +1,7 @@
 //! Safe wrappers for the Cryptoki API.
 #![allow(dead_code)] // XXX for now ...
 
-use std::{io, mem, ptr};
+use std::{io, mem, ptr, slice};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use libloading::{Library, Symbol};
@@ -761,6 +761,8 @@ pub struct Attribute<'a> {
     marker: PhantomData<&'a u8>,
 }
 
+/// # Creation
+///
 impl<'a> Attribute<'a> {
     fn new<T: ?Sized>(attr: sys::CK_ATTRIBUTE_TYPE, ptr: *const T, len: usize)
                       -> Self {
@@ -774,6 +776,10 @@ impl<'a> Attribute<'a> {
         }
     }
 
+    pub fn from_none(attr: sys::CK_ATTRIBUTE_TYPE) -> Self {
+        Self::new(attr, ptr::null() as *const u8, 0)
+    }
+
     pub fn from_ref<T>(attr: sys::CK_ATTRIBUTE_TYPE, val: &'a T) -> Self {
         Self::new(attr, val, mem::size_of::<T>())
     }
@@ -781,16 +787,44 @@ impl<'a> Attribute<'a> {
     pub fn from_bytes(attr: sys::CK_ATTRIBUTE_TYPE, value: &'a [u8]) -> Self {
         Self::new(attr, value.as_ptr(), value.len())
     }
+}
 
-    pub fn from_bool(attr: sys::CK_ATTRIBUTE_TYPE, value: bool) -> Self {
-        Self::from_ref(attr, if value { &TRUE_VALUE }
-                             else { &FALSE_VALUE })
+/// # Access to Data
+///
+impl<'a> Attribute<'a> {
+    pub fn len(&self) -> Option<usize> {
+        if self.inner.ulValueLen == sys::CK_UNAVAILABLE_INFORMATION {
+            None
+        }
+        else {
+            Some(from_ck_long(self.inner.ulValueLen))
+        }
+    }
+
+    pub fn bytes(&self) -> Option<&'a [u8]> {
+        if self.inner.pValue == ptr::null() {
+            None
+        }
+        else {
+            self.len().map(|len| unsafe {
+                slice::from_raw_parts(mem::transmute(self.inner.pValue), len)
+            })
+        }
+    }
+
+    pub fn value<T>(&self) -> Option<&T> {
+        self.len().map(|len| unsafe {
+            assert_eq!(mem::size_of::<T>(), len);
+            mem::transmute(self.inner.pValue)
+        })
+    }
+
+    pub fn value_mut<T>(&mut self) -> Option<&mut T> {
+        self.len().map(|len| unsafe {
+            assert_eq!(mem::size_of::<T>(), len);
+            mem::transmute(self.inner.pValue)
+        })
     }
 }
 
-
-// Statics for making boolean attributes on the fly.
-//
-static TRUE_VALUE: sys::CK_BBOOL = sys::CK_TRUE;
-static FALSE_VALUE: sys::CK_BBOOL = sys::CK_FALSE;
 
