@@ -159,7 +159,7 @@ pub const CKF_HW_SLOW: CK_FLAGS = 4;
 
 /// Provides information about a token.
 #[repr(C)]
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct CK_TOKEN_INFO {
     /// Blank padded.
     pub label: [CK_UTF8CHAR; 32],
@@ -170,9 +170,11 @@ pub struct CK_TOKEN_INFO {
     /// Blank padded.
     pub model: [CK_UTF8CHAR; 16],
 
+    /// Blank padded.
+    pub serialNumber: [CK_CHAR; 16],
+
     /// See below.
     pub flags: CK_FLAGS,
-
 
     /// Max open sessions.
     pub ulMaxSessionCount: CK_ULONG,
