@@ -1,30 +1,333 @@
 //! An error from PKCS #11.
 
-use std::{error, fmt, result};
+use std::{error, fmt};
 use pkcs11_sys as sys;
 
 
-#[derive(Clone, Debug)]
-pub struct Error {
-    raw: sys::CK_RV,
+//------------ KeyError ------------------------------------------------------
+
+/// A key was not good enough.
+#[derive(Copy, Clone)]
+pub enum KeyError {
+    /// The specified key is not allowed for the attempted operation.
+    KeyFunctionNotPermitted,
+
+    /// The specified key is not valid.
+    KeyHandleInvalid,
+
+    /// The size of the specified key is out of range for the operation.
+    KeySizeRange,
+
+    /// The specified key cannot be used for the given mechanism.
+    KeyTypeInconsistent,
 }
 
-impl Error {
-    pub fn error_code(&self) -> sys::CK_RV {
-        self.raw
+impl KeyError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_KEY_HANDLE_INVALID => Some(KeyError::KeyHandleInvalid),
+            sys::CKR_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
+            sys::CKR_KEY_TYPE_INCONSISTENT
+                => Some(KeyError::KeyTypeInconsistent),
+            _ => None
+        }
+    }
+
+    pub fn wrapping_from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_WRAPPING_KEY_HANDLE_INVALID
+                => Some(KeyError::KeyHandleInvalid),
+            sys::CKR_WRAPPING_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
+            sys::CKR_WRAPPING_KEY_TYPE_INCONSISTENT
+                => Some(KeyError::KeyTypeInconsistent),
+            _ => None
+        }
+    }
+
+    pub fn unwrapping_from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_UNWRAPPING_KEY_HANDLE_INVALID
+                => Some(KeyError::KeyHandleInvalid),
+            sys::CKR_UNWRAPPING_KEY_SIZE_RANGE
+                => Some(KeyError::KeySizeRange),
+            sys::CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT
+                => Some(KeyError::KeyTypeInconsistent),
+            _ => None
+        }
     }
 }
 
-impl From<sys::CK_RV> for Error {
+
+//------------ MechanismError ------------------------------------------------
+
+/// The selected mechanism is not good enough.
+#[derive(Copy, Clone)]
+pub enum MechanismError {
+    /// The specified mechanism is invalid for this operation.
+    MechanismInvalid,
+
+    /// Invalid parameters were supplied for the mechanism for the operation.
+    MechanismParamInvalid,
+}
+
+impl MechanismError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_MECHANISM_INVALID
+                => Some(MechanismError::MechanismInvalid),
+            sys::CKR_MECHANISM_PARAM_INVALID
+                => Some(MechanismError::MechanismParamInvalid),
+            _ => None
+        }
+    }
+}
+
+
+//------------ PermissionError -----------------------------------------------
+
+/// A operation has failed due to lack of permissions.
+///
+/// This type lumps together all specific errors that happen because an
+/// operation that would otherwise probably be fine failed because it was
+/// forbidden either by configuration or policy.
+#[derive(Copy, Clone)]
+pub enum PermissionError {
+    /// The requested action was prohibited.
+    ///
+    /// This is either because of policy reasons or because the action was 
+    /// indeed not allowed for the referenced object.
+    ActionProhibited,
+
+    /// The requested information was considered sensitive.
+    InformationSensitive,
+
+    /// A PIN has expired.
+    ///
+    /// The operation can only be carried out once the PIN has been reset
+    /// using the `set_pin()` function.
+    PinExpired,
+
+    /// The specified session is a read-only session.
+    SessionReadOnly,
+
+    /// The token is write-protected.
+    TokenWriteProtected,
+
+    /// The appropriate user was not logged in.
+    UserNotLoggedIn,
+}
+
+impl PermissionError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_ACTION_PROHIBITED
+                => Some(PermissionError::ActionProhibited),
+            sys::CKR_INFORMATION_SENSITIVE
+                => Some(PermissionError::InformationSensitive),
+            sys::CKR_PIN_EXPIRED => Some(PermissionError::PinExpired),
+            sys::CKR_SESSION_READ_ONLY
+                => Some(PermissionError::SessionReadOnly),
+            sys::CKR_TOKEN_WRITE_PROTECTED
+                => Some(PermissionError::TokenWriteProtected),
+            sys::CKR_USER_NOT_LOGGED_IN
+                => Some(PermissionError::UserNotLoggedIn),
+            _ => None,
+        }
+    }
+}
+
+
+//------------ SessionError --------------------------------------------------
+
+/// An error happened while working with a session.
+///
+/// An error of this category means that the session in question is not
+/// usable anymore. In order to progress, a new session needs to be created.
+#[derive(Copy, Clone)]
+pub enum SessionError {
+    /// The session was invalid at the time that the function was invoked.
+    ///
+    /// This can happen if the session’s token is removed before the function
+    /// invocation, since removing a token closes all sessions with it.
+    SessionHandleInvalid,
+
+    /// The session was closed during the execution of the function.
+    SessionClosed,
+}
+
+impl SessionError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_SESSION_HANDLE_INVALID
+                => Some(SessionError::SessionHandleInvalid),
+            sys::CKR_SESSION_CLOSED => Some(SessionError::SessionClosed),
+            _ => None
+        }
+    }
+}
+
+
+//------------ TemplateError -------------------------------------------------
+
+/// A template supplied to a function was invalid.
+#[derive(Copy, Clone)]
+pub enum TemplateError {
+    /// One of the attributes cannot be set or modified.
+    AttributeReadOnly,
+
+    /// One of the attributes had an invalid type specified. 
+    AttributeTypeInvalid,
+
+    /// One of the attributes had an invalid value.
+    AttributeValueInvalid,
+
+    /// One of the attributes specified a curve not supported by this token.
+    CurveNotSupported,
+
+    /// Invalid or unsupported domain parameters were supplied.
+    DomainParamsInvalid,
+
+    /// The template specified lacks some necessary attributes.
+    TemplateIncomplete,
+
+    /// The template specified has conflicting attributes. 
+    TemplateInconsistent,
+}
+
+impl TemplateError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_ATTRIBUTE_READ_ONLY
+                => Some(TemplateError::AttributeReadOnly),
+            sys::CKR_ATTRIBUTE_TYPE_INVALID
+                => Some(TemplateError::AttributeTypeInvalid),
+            sys::CKR_ATTRIBUTE_VALUE_INVALID
+                => Some(TemplateError::AttributeValueInvalid),
+            sys::CKR_CURVE_NOT_SUPPORTED
+                => Some(TemplateError::CurveNotSupported),
+            sys::CKR_DOMAIN_PARAMS_INVALID
+                => Some(TemplateError::DomainParamsInvalid),
+            sys::CKR_TEMPLATE_INCOMPLETE
+                => Some(TemplateError::TemplateIncomplete),
+            sys::CKR_TEMPLATE_INCONSISTENT
+                => Some(TemplateError::TemplateInconsistent),
+            _ => None
+        }
+    }
+}
+
+
+//------------ TokenError ---------------------------------------------------
+
+/// An error happened with the library or token.
+///
+/// An error of this type means that something reasonably bad or unforeseen
+/// has happened that continuing may not really be advisable.
+#[derive(Copy, Clone)]
+pub enum TokenError {
+    /// Some horrible, unrecoverable error has occurred.
+    ///
+    /// In the worst case, it is possible that the function only partially
+    /// succeeded, and that the computer and/or token is in an inconsistent
+    /// state.
+    GeneralError,
+
+    /// Insufficient memory on the host computer.
+    ///
+    /// The computer that the Cryptoki library is running on has insufficient
+    /// memory to perform the requested function.
+    HostMemory,
+
+    /// The requested function could not be performed.
+    ///
+    /// If the function in question was a session, more detailed information
+    /// may be available through the session info’s device error field.
+    FunctionFailed,
+
+    /// The token does not have sufficient memory to perform the function.
+    DeviceMemory,
+
+    /// Some problem has occurred with the token and/or slot.
+    DeviceError,
+
+    /// The token was not present at the time the function was invoked.
+    TokenNotPresent,
+
+    /// The token was removed from its slot during execution of the function.
+    DeviceRemoved,
+
+    // Further errors specified to happen for functions that we can put here:
+    //
+    // CKR_FUNCTION_CANCELED
+
+    /// The library or slot does not recognize the token in the slot.
+    TokenNotRecognized,
+
+    /// Some other error has occurred.
+    ///
+    /// This error means that the underlying library has returned an error
+    /// that wasn’t allowed for this function by the standard. As this
+    /// means that the state of library and token isn’t well defined anymore,
+    /// it might be advisable to give up.
+    Other(CryptokiError),
+}
+
+impl From<CryptokiError> for TokenError {
+    fn from(err: CryptokiError) -> Self {
+        match err.0 {
+            sys::CKR_DEVICE_ERROR => TokenError::DeviceError,
+            sys::CKR_DEVICE_MEMORY => TokenError::DeviceMemory,
+            sys::CKR_DEVICE_REMOVED => TokenError::DeviceRemoved,
+            sys::CKR_FUNCTION_FAILED => TokenError::FunctionFailed,
+            sys::CKR_GENERAL_ERROR => TokenError::GeneralError,
+            sys::CKR_HOST_MEMORY => TokenError::HostMemory,
+            sys::CKR_TOKEN_NOT_PRESENT => TokenError::TokenNotPresent,
+            sys::CKR_TOKEN_NOT_RECOGNIZED => TokenError::TokenNotRecognized,
+            _ => TokenError::Other(err)
+        }
+    }
+}
+
+impl From<sys::CK_RV> for TokenError {
     fn from(err: sys::CK_RV) -> Self {
-        Error{raw: err}
+        CryptokiError::from(err).into()
     }
 }
 
-impl error::Error for Error {
+
+//------------ CryptokiError ------------------------------------------------
+
+/// A raw error from the underlying PKCS#11 library.
+#[derive(Copy, Clone)]
+pub struct CryptokiError(sys::CK_RV);
+
+impl CryptokiError {
+    pub fn error_code(&self) -> sys::CK_RV {
+        self.0
+    }
+}
+
+
+//--- From
+
+impl From<sys::CK_RV> for CryptokiError {
+    fn from(err: sys::CK_RV) -> Self {
+        CryptokiError(err)
+    }
+}
+
+impl From<CryptokiError> for sys::CK_RV {
+    fn from(err: CryptokiError) -> Self {
+        err.0
+    }
+}
+
+
+//--- Error
+
+impl error::Error for CryptokiError {
     fn description(&self) -> &str {
-        match self.raw {
-            // XXX Add lots and lots of cases here.
+        match self.0 {
             sys::CKR_OK => "CKR_OK",
             sys::CKR_CANCEL => "CKR_CANCEL",
             sys::CKR_HOST_MEMORY => "CKR_HOST_MEMORY",
@@ -165,11 +468,21 @@ impl error::Error for Error {
     }
 }
 
-impl fmt::Display for Error {
+
+//--- Debug
+
+impl fmt::Debug for CryptokiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         error::Error::description(self).fmt(f)
     }
 }
 
 
-pub type Result<T> = result::Result<T, Error>;
+//--- Display
+
+impl fmt::Display for CryptokiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        error::Error::description(self).fmt(f)
+    }
+}
+

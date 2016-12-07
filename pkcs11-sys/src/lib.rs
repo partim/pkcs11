@@ -341,6 +341,7 @@ pub const CKS_RW_SO_FUNCTIONS: CK_STATE = 4;
 
 /// Provides information about a session.
 #[repr(C)]
+#[derive(Clone, Debug, Default)]
 pub struct CK_SESSION_INFO {
     pub slotID: CK_SLOT_ID,
     pub state: CK_STATE,
