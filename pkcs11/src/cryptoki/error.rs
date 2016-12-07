@@ -1,1021 +1,490 @@
-//! Safe wrappers for the Cryptoki API.
+//! Error handling.
 
-use std::{iter, mem, ptr, slice};
-use std::marker::PhantomData;
-use std::sync::Arc;
-use libloading::{Library, Symbol};
+use std::{error, fmt};
 use pkcs11_sys as sys;
-use super::error::{KeyError, MechanismError, PermissionError, SessionError,
-                   TemplateError, TokenError};
 
 
-//------------ Cryptoki ------------------------------------------------------
+//------------ CryptokiError ------------------------------------------------
 
-#[derive(Clone)]
-pub struct Cryptoki {
-    inner: Arc<CryptokiOnce>,
-}
+/// A raw error from the underlying PKCS#11 library.
+#[derive(Copy, Clone)]
+pub struct CryptokiError(sys::CK_RV);
 
-impl Cryptoki {
-    pub fn new(lib: Library, args: Option<sys::CK_C_INITIALIZE_ARGS>)
-               -> Result<Self, TokenError> {
-        CryptokiOnce::new(lib, args).map(|ck| Cryptoki{inner: Arc::new(ck)})
+impl CryptokiError {
+    pub fn error_code(&self) -> sys::CK_RV {
+        self.0
     }
 }
 
 
-macro_rules! call_ck {
-    ($slf:ident.$f:ident( $( $arg:expr ),* ) ) => {
-        match ((*$slf.inner.ck).$f)( $( $arg ),* ) {
-            sys::CKR_OK => { }
-            err => return Err(err.into())
+//--- From
+
+impl From<sys::CK_RV> for CryptokiError {
+    fn from(err: sys::CK_RV) -> Self {
+        CryptokiError(err)
+    }
+}
+
+impl From<CryptokiError> for sys::CK_RV {
+    fn from(err: CryptokiError) -> Self {
+        err.0
+    }
+}
+
+
+//--- Error
+
+impl error::Error for CryptokiError {
+    fn description(&self) -> &str {
+        match self.0 {
+            sys::CKR_OK => "CKR_OK",
+            sys::CKR_CANCEL => "CKR_CANCEL",
+            sys::CKR_HOST_MEMORY => "CKR_HOST_MEMORY",
+            sys::CKR_SLOT_ID_INVALID => "CKR_SLOT_ID_INVALID",
+
+            sys::CKR_GENERAL_ERROR => "CKR_GENERAL_ERROR",
+            sys::CKR_FUNCTION_FAILED => "CKR_FUNCTION_FAILED",
+
+            sys::CKR_ARGUMENTS_BAD => "CKR_ARGUMENTS_BAD",
+            sys::CKR_NO_EVENT => "CKR_NO_EVENT",
+            sys::CKR_NEED_TO_CREATE_THREADS => "CKR_NEED_TO_CREATE_THREADS",
+            sys::CKR_CANT_LOCK => "CKR_CANT_LOCK",
+
+            sys::CKR_ATTRIBUTE_READ_ONLY => "CKR_ATTRIBUTE_READ_ONLY",
+            sys::CKR_ATTRIBUTE_SENSITIVE => "CKR_ATTRIBUTE_SENSITIVE",
+            sys::CKR_ATTRIBUTE_TYPE_INVALID => "CKR_ATTRIBUTE_TYPE_INVALID",
+            sys::CKR_ATTRIBUTE_VALUE_INVALID => "CKR_ATTRIBUTE_VALUE_INVALID",
+
+            sys::CKR_ACTION_PROHIBITED => "CKR_ACTION_PROHIBITED",
+
+            sys::CKR_DATA_INVALID => "CKR_DATA_INVALID",
+            sys::CKR_DATA_LEN_RANGE => "CKR_DATA_LEN_RANGE",
+            sys::CKR_DEVICE_ERROR => "CKR_DEVICE_ERROR",
+            sys::CKR_DEVICE_MEMORY => "CKR_DEVICE_MEMORY",
+            sys::CKR_DEVICE_REMOVED => "CKR_DEVICE_REMOVED",
+            sys::CKR_ENCRYPTED_DATA_INVALID => "CKR_ENCRYPTED_DATA_INVALID",
+            sys::CKR_ENCRYPTED_DATA_LEN_RANGE
+                => "CKR_ENCRYPTED_DATA_LEN_RANGE",
+            sys::CKR_FUNCTION_CANCELED => "CKR_FUNCTION_CANCELED",
+            sys::CKR_FUNCTION_NOT_PARALLEL => "CKR_FUNCTION_NOT_PARALLEL",
+
+            sys::CKR_FUNCTION_NOT_SUPPORTED => "CKR_FUNCTION_NOT_SUPPORTED",
+
+            sys::CKR_KEY_HANDLE_INVALID => "CKR_KEY_HANDLE_INVALID",
+
+            sys::CKR_KEY_SIZE_RANGE => "CKR_KEY_SIZE_RANGE",
+            sys::CKR_KEY_TYPE_INCONSISTENT => "CKR_KEY_TYPE_INCONSISTENT",
+
+            sys::CKR_KEY_NOT_NEEDED => "CKR_KEY_NOT_NEEDED",
+            sys::CKR_KEY_CHANGED => "CKR_KEY_CHANGED",
+            sys::CKR_KEY_NEEDED => "CKR_KEY_NEEDED",
+            sys::CKR_KEY_INDIGESTIBLE => "CKR_KEY_INDIGESTIBLE",
+            sys::CKR_KEY_FUNCTION_NOT_PERMITTED
+                => "CKR_KEY_FUNCTION_NOT_PERMITTED",
+            sys::CKR_KEY_NOT_WRAPPABLE => "CKR_KEY_NOT_WRAPPABLE",
+            sys::CKR_KEY_UNEXTRACTABLE => "CKR_KEY_UNEXTRACTABLE",
+
+            sys::CKR_MECHANISM_INVALID => "CKR_MECHANISM_INVALID",
+            sys::CKR_MECHANISM_PARAM_INVALID => "CKR_MECHANISM_PARAM_INVALID",
+
+            sys::CKR_OBJECT_HANDLE_INVALID => "CKR_OBJECT_HANDLE_INVALID",
+            sys::CKR_OPERATION_ACTIVE => "CKR_OPERATION_ACTIVE",
+            sys::CKR_OPERATION_NOT_INITIALIZED
+                => "CKR_OPERATION_NOT_INITIALIZED",
+            sys::CKR_PIN_INCORRECT => "CKR_PIN_INCORRECT",
+            sys::CKR_PIN_INVALID => "CKR_PIN_INVALID",
+            sys::CKR_PIN_LEN_RANGE => "CKR_PIN_LEN_RANGE",
+
+            sys::CKR_PIN_EXPIRED => "CKR_PIN_EXPIRED",
+            sys::CKR_PIN_LOCKED => "CKR_PIN_LOCKED",
+
+            sys::CKR_SESSION_CLOSED => "CKR_SESSION_CLOSED",
+            sys::CKR_SESSION_COUNT => "CKR_SESSION_COUNT",
+            sys::CKR_SESSION_HANDLE_INVALID => "CKR_SESSION_HANDLE_INVALID",
+            sys::CKR_SESSION_PARALLEL_NOT_SUPPORTED
+                => "CKR_SESSION_PARALLEL_NOT_SUPPORTED",
+            sys::CKR_SESSION_READ_ONLY => "CKR_SESSION_READ_ONLY",
+            sys::CKR_SESSION_EXISTS => "CKR_SESSION_EXISTS",
+
+            sys::CKR_SESSION_READ_ONLY_EXISTS => "CKR_SESSION_READ_ONLY_EXISTS",
+            sys::CKR_SESSION_READ_WRITE_SO_EXISTS
+                => "CKR_SESSION_READ_WRITE_SO_EXISTS",
+
+            sys::CKR_SIGNATURE_INVALID => "CKR_SIGNATURE_INVALID",
+            sys::CKR_SIGNATURE_LEN_RANGE => "CKR_SIGNATURE_LEN_RANGE",
+            sys::CKR_TEMPLATE_INCOMPLETE => "CKR_TEMPLATE_INCOMPLETE",
+            sys::CKR_TEMPLATE_INCONSISTENT => "CKR_TEMPLATE_INCONSISTENT",
+            sys::CKR_TOKEN_NOT_PRESENT => "CKR_TOKEN_NOT_PRESENT",
+            sys::CKR_TOKEN_NOT_RECOGNIZED => "CKR_TOKEN_NOT_RECOGNIZED",
+            sys::CKR_TOKEN_WRITE_PROTECTED => "CKR_TOKEN_WRITE_PROTECTED",
+            sys::CKR_UNWRAPPING_KEY_HANDLE_INVALID
+                => "CKR_UNWRAPPING_KEY_HANDLE_INVALID",
+            sys::CKR_UNWRAPPING_KEY_SIZE_RANGE
+                => "CKR_UNWRAPPING_KEY_SIZE_RANGE",
+            sys::CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT
+                => "CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT",
+            sys::CKR_USER_ALREADY_LOGGED_IN => "CKR_USER_ALREADY_LOGGED_IN",
+            sys::CKR_USER_NOT_LOGGED_IN => "CKR_USER_NOT_LOGGED_IN",
+            sys::CKR_USER_PIN_NOT_INITIALIZED
+                => "CKR_USER_PIN_NOT_INITIALIZED",
+            sys::CKR_USER_TYPE_INVALID => "CKR_USER_TYPE_INVALID",
+
+            sys::CKR_USER_ANOTHER_ALREADY_LOGGED_IN
+                => "CKR_USER_ANOTHER_ALREADY_LOGGED_IN",
+            sys::CKR_USER_TOO_MANY_TYPES => "CKR_USER_TOO_MANY_TYPES",
+
+            sys::CKR_WRAPPED_KEY_INVALID => "CKR_WRAPPED_KEY_INVALID",
+            sys::CKR_WRAPPED_KEY_LEN_RANGE => "CKR_WRAPPED_KEY_LEN_RANGE",
+            sys::CKR_WRAPPING_KEY_HANDLE_INVALID
+                => "CKR_WRAPPING_KEY_HANDLE_INVALID",
+            sys::CKR_WRAPPING_KEY_SIZE_RANGE
+                => "CKR_WRAPPING_KEY_SIZE_RANGE",
+            sys::CKR_WRAPPING_KEY_TYPE_INCONSISTENT
+                => "CKR_WRAPPING_KEY_TYPE_INCONSISTENT",
+            sys::CKR_RANDOM_SEED_NOT_SUPPORTED
+                => "CKR_RANDOM_SEED_NOT_SUPPORTED",
+
+            sys::CKR_RANDOM_NO_RNG => "CKR_RANDOM_NO_RNG",
+
+            sys::CKR_DOMAIN_PARAMS_INVALID => "CKR_DOMAIN_PARAMS_INVALID",
+
+            sys::CKR_CURVE_NOT_SUPPORTED => "CKR_CURVE_NOT_SUPPORTED",
+
+            sys::CKR_BUFFER_TOO_SMALL => "CKR_BUFFER_TOO_SMALL",
+            sys::CKR_SAVED_STATE_INVALID => "CKR_SAVED_STATE_INVALID",
+            sys::CKR_INFORMATION_SENSITIVE => "CKR_INFORMATION_SENSITIVE",
+            sys::CKR_STATE_UNSAVEABLE => "CKR_STATE_UNSAVEABLE",
+
+            sys::CKR_CRYPTOKI_NOT_INITIALIZED
+                => "CKR_CRYPTOKI_NOT_INITIALIZED",
+            sys::CKR_CRYPTOKI_ALREADY_INITIALIZED
+                => "CKR_CRYPTOKI_ALREADY_INITIALIZED",
+            sys::CKR_MUTEX_BAD => "CKR_MUTEX_BAD",
+            sys::CKR_MUTEX_NOT_LOCKED => "CKR_MUTEX_NOT_LOCKED",
+
+            sys::CKR_NEW_PIN_MODE => "CKR_NEW_PIN_MODE",
+            sys::CKR_NEXT_OTP => "CKR_NEXT_OTP",
+
+            sys::CKR_EXCEEDED_MAX_ITERATIONS => "CKR_EXCEEDED_MAX_ITERATIONS",
+            sys::CKR_FIPS_SELF_TEST_FAILED => "CKR_FIPS_SELF_TEST_FAILED",
+            sys::CKR_LIBRARY_LOAD_FAILED => "CKR_LIBRARY_LOAD_FAILED",
+            sys::CKR_PIN_TOO_WEAK => "CKR_PIN_TOO_WEAK",
+            sys::CKR_PUBLIC_KEY_INVALID => "CKR_PUBLIC_KEY_INVALID",
+
+            sys::CKR_FUNCTION_REJECTED => "CKR_FUNCTION_REJECTED",
+            _ => "unknown error"
         }
     }
 }
 
 
-impl Cryptoki {
-    pub fn get_info(&self, info: &mut sys::CK_INFO)
-                    -> Result<(), TokenError> {
-        Ok(unsafe {
-            call_ck!(self.C_GetInfo(info));
-        })
-    }
+//--- Debug
 
-    pub fn get_slot_list(&self, token_present: bool)
-                         -> Result<Vec<SlotId>, TokenError> {
-        let token_present = if token_present { sys::CK_TRUE }
-                            else { sys::CK_FALSE };
-        Ok(unsafe {
-            let mut len = 0;
-            call_ck!(self.C_GetSlotList(token_present, ptr::null_mut(),
-                                        &mut len));
-            let mut res = vec![0; from_ck_long(len)];
-            call_ck!(self.C_GetSlotList(token_present, res.as_mut_ptr(),
-                                        &mut len));
-            res.truncate(from_ck_long(len));
-            mem::transmute(res)
-        })
+impl fmt::Debug for CryptokiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        error::Error::description(self).fmt(f)
     }
+}
 
-    pub fn get_slot_info(&self, slot_id: SlotId,
-                         info: &mut sys::CK_SLOT_INFO)
-                       -> Result<(), SlotAccessError> {
-        Ok(unsafe {
-            call_ck!(self.C_GetSlotInfo(slot_id.into(), info));
-        })
+
+//--- Display
+
+impl fmt::Display for CryptokiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        error::Error::description(self).fmt(f)
     }
+}
 
-    pub fn get_token_info(&self, slot_id: SlotId,
-                          info: &mut sys::CK_TOKEN_INFO)
-                        -> Result<(), SlotAccessError> {
-        Ok(unsafe {
-            call_ck!(self.C_GetTokenInfo(slot_id.into(), info));
-        })
-    }
 
-    pub fn get_mechanism_list<T>(&self, slot_id: SlotId)
-                                 -> Result<T, SlotAccessError> 
-                              where T: iter::FromIterator<MechanismType> {
-        let vec = unsafe {
-            let mut len = 0;
-            call_ck!(self.C_GetMechanismList(slot_id.into(), ptr::null_mut(),
-                                             &mut len));
-            let mut res = vec![0; from_ck_long(len)];
-            call_ck!(self.C_GetMechanismList(slot_id.into(), res.as_mut_ptr(),
-                                             &mut len));
-            res.truncate(from_ck_long(len));
-            res
-        };
-        Ok(T::from_iter(vec.into_iter().map(MechanismType::from)))
-    }
+//============ Error Categories ==============================================
 
-    pub fn get_mechanism_info(&self, slot_id: SlotId,
-                              mechanism: MechanismType,
-                              info: &mut sys::CK_MECHANISM_INFO)
-                              -> Result<(), GetMechanismInfoError> {
-        Ok(unsafe {
-            call_ck!(self.C_GetMechanismInfo(slot_id.into(), mechanism.into(),
-                                             info));
-        })
-    }
+//------------ KeyError ------------------------------------------------------
 
-    pub fn init_token(&self, slot_id: SlotId, pin: &str,
-                    label: &str) -> Result<(), InitTokenError> {
-        if label.as_bytes().len() != 32 {
-            return Err(InitTokenError::LabelIncorrect)
+/// A key was not good enough.
+#[derive(Copy, Clone)]
+pub enum KeyError {
+    /// The specified key is not allowed for the attempted operation.
+    KeyFunctionNotPermitted,
+
+    /// The specified key is not valid.
+    KeyHandleInvalid,
+
+    /// The size of the specified key is out of range for the operation.
+    KeySizeRange,
+
+    /// The specified key cannot be used for the given mechanism.
+    KeyTypeInconsistent,
+}
+
+impl KeyError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_KEY_HANDLE_INVALID => Some(KeyError::KeyHandleInvalid),
+            sys::CKR_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
+            sys::CKR_KEY_TYPE_INCONSISTENT
+                => Some(KeyError::KeyTypeInconsistent),
+            _ => None
         }
-        Ok(unsafe {
-            call_ck!(self.C_InitToken(slot_id.into(), pin.as_ptr(),
-                                      ck_len(pin), label.as_ptr()))
-        })
     }
 
-    pub fn init_pin(&self, session: SessionHandle, pin: &str)
-                  -> Result<(), SetPinError> {
-        Ok(unsafe {
-            call_ck!(self.C_InitPIN(session.into(), pin.as_ptr(), ck_len(pin)))
-        })
+    pub fn wrapping_from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_WRAPPING_KEY_HANDLE_INVALID
+                => Some(KeyError::KeyHandleInvalid),
+            sys::CKR_WRAPPING_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
+            sys::CKR_WRAPPING_KEY_TYPE_INCONSISTENT
+                => Some(KeyError::KeyTypeInconsistent),
+            _ => None
+        }
     }
 
-    pub fn set_pin(&self, session: SessionHandle, old_pin: &str,
-                 new_pin: &str) -> Result<(), SetPinError> {
-        Ok(unsafe {
-            call_ck!(self.C_SetPIN(session.into(), old_pin.as_ptr(),
-                                   ck_len(old_pin), new_pin.as_ptr(),
-                                   ck_len(new_pin)))
-        })
-    }
-
-    pub fn open_session(&self, slot_id: SlotId, flags: sys::CK_FLAGS,
-                        app: *const sys::CK_VOID,
-                        notify: Option<sys::CK_NOTIFY>)
-                        -> Result<SessionHandle, OpenSessionError> {
-        Ok(unsafe {
-            let mut handle = 0;
-            call_ck!(self.C_OpenSession(slot_id.into(), flags, app, notify,
-                                        &mut handle));
-            handle.into()
-        })
-    }
-
-    pub fn close_session(&self, session: SessionHandle)
-                         -> Result<(), SessionAccessError> {
-        Ok(unsafe { call_ck!(self.C_CloseSession(session.into())) })
-    }
-
-    pub fn close_all_sessions(&self, slot_id: SlotId)
-                              -> Result<(), SlotAccessError> {
-        Ok(unsafe { call_ck!(self.C_CloseAllSessions(slot_id.into())) })
-    }
-
-    pub fn get_session_info(&self, session: SessionHandle,
-                            info: &mut sys::CK_SESSION_INFO)
-                            -> Result<(), SessionAccessError> {
-        Ok(unsafe {
-            call_ck!(self.C_GetSessionInfo(session.into(), info));
-        })
-    }
-
-    pub fn get_operation_state(&self, session: SessionHandle,
-                               state: Option<&mut [u8]>)
-                               -> Result<usize, GetOperationStateError> {
-        Ok(unsafe {
-            let mut res = opt_len(&state);
-            call_ck!(self.C_GetOperationState(session.into(),
-                                              opt_mut_ptr(state), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn set_operation_state(&self, session: SessionHandle,
-                               operation_state: &[u8],
-                               encryption_key: Option<ObjectHandle>,
-                               authentication_key: Option<ObjectHandle>)
-                               -> Result<(), SetOperationStateError> {
-        let encryption_key = match encryption_key {
-            Some(key) => key.into(),
-            None => 0
-        };
-        let authentication_key = match authentication_key {
-            Some(key) => key.into(),
-            None => 0
-        };
-        Ok(unsafe { call_ck!(
-            self.C_SetOperationState(session.into(), operation_state.as_ptr(),
-                                     ck_len(operation_state),
-                                     encryption_key,
-                                     authentication_key)
-        )})
-    }
-
-    pub fn login(&self, session: SessionHandle, user_type: UserType,
-                 pin: Option<&str>) -> Result<(), LoginError> {
-        let (ptr, len) = match pin {
-            Some(pin) => (pin.as_ptr(), ck_len(pin)),
-            None => (ptr::null(), 0)
-        };
-        Ok(unsafe { call_ck!(
-            self.C_Login(session.into(), user_type.into(), ptr, len)
-        )})
-    }
-
-    pub fn logout(&self, session: SessionHandle) -> Result<(), LogoutError> {
-        Ok(unsafe { call_ck!(self.C_Logout(session.into())) })
-    }
-
-    pub fn create_object<'a, T>(&self, session: SessionHandle, template: T)
-                                -> Result<ObjectHandle, CreateObjectError>
-                         where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let mut res = 0;
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_CreateObject(session.into(), ptr, len, &mut res));
-            res.into()
-        })
-    }
-
-    pub fn copy_object<'a, T>(&self, session: SessionHandle,
-                              object: ObjectHandle, template: T)
-                              -> Result<ObjectHandle, CopyObjectError> 
-                       where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let mut res = 0;
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_CopyObject(session.into(), object.into(), ptr,
-                                       len, &mut res));
-            res.into()
-        })
-    }
-
-    pub fn destroy_object(&self, session: SessionHandle, object: ObjectHandle)
-                          -> Result<(), ObjectAccessError> {
-        Ok(unsafe {
-            call_ck!(self.C_DestroyObject(session.into(), object.into()))
-        })
-    }
-
-    pub fn get_object_size(&self, session: SessionHandle,
-                           object: ObjectHandle)
-                           -> Result<usize, ObjectAccessError> {
-        Ok(unsafe {
-            let mut res = 0;
-            call_ck!(self.C_GetObjectSize(session.into(), object.into(),
-                                          &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn get_attribute_value<'a, T>(&self, session: SessionHandle,
-                                      object: ObjectHandle, mut template: T)
-                                      -> Result<(), GetAttributeValueError>
-                               where T: AsMut<[Attribute<'a>]> {
-        Ok(unsafe {
-            let template: &mut [sys::CK_ATTRIBUTE]
-                = mem::transmute(template.as_mut());
-            call_ck!(self.C_GetAttributeValue(session.into(), object.into(),
-                                              template.as_mut_ptr(),
-                                              ck_len(template)))
-        })
-    }
-
-    pub fn set_attribute_value<'a, T>(&self, session: SessionHandle,
-                                      object: ObjectHandle, template: T)
-                                      -> Result<(), CopyObjectError>
-                               where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_SetAttributeValue(session.into(), object.into(),
-                                              ptr, len))
-        })
-    }
-
-    pub fn find_objects_init<'a, T>(&self, session: SessionHandle,
-                                    template: T)
-                                    -> Result<(), FindObjectsInitError>
-                             where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_FindObjectsInit(session.into(), ptr, len))
-        })
-    }
-
-    pub fn find_objects(&self, session: SessionHandle,
-                        buf: &mut [ObjectHandle])
-                        -> Result<usize, ContinuationError> {
-        Ok(unsafe {
-            let mut res = 0;
-            let mut buf: &mut [sys::CK_OBJECT_HANDLE] = mem::transmute(buf);
-            call_ck!(self.C_FindObjects(session.into(), buf.as_mut_ptr(),
-                                        ck_len(buf), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn find_objects_final(&self, session: SessionHandle)
-                              -> Result<(), ContinuationError> {
-        Ok(unsafe {
-            call_ck!(self.C_FindObjectsFinal(session.into()))
-        })
-    }
-
-    pub fn encrypt_init<P>(&self, session: SessionHandle,
-                           mechanism: MechanismType, param: &P,
-                           key: ObjectHandle)
-                           -> Result<(), CryptoInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_EncryptInit(session.into(),
-                                        &init_mechanism(mechanism, param),
-                                        key.into()))
-        })
-    }
-
-    pub fn encrypt(&self, session: SessionHandle,
-                   data: &[u8], encrypted_data: Option<&mut [u8]>)
-                   -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&encrypted_data);
-            call_ck!(self.C_Encrypt(session.into(), data.as_ptr(), ck_len(data),
-                                    opt_mut_ptr(encrypted_data), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn encrypt_update(&self, session: SessionHandle,
-                          part: &[u8], encrypted_part: Option<&mut [u8]>)
-                          -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&encrypted_part);
-            call_ck!(self.C_EncryptUpdate(session.into(), part.as_ptr(),
-                                          ck_len(part),
-                                          opt_mut_ptr(encrypted_part),
-                                          &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn encrypt_final(&self, session: SessionHandle,
-                         last_encrypted_part: Option<&mut [u8]>)
-                         -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&last_encrypted_part);
-            call_ck!(self.C_EncryptFinal(session.into(),
-                                         opt_mut_ptr(last_encrypted_part),
-                                         &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn decrypt_init<P>(&self, session: SessionHandle,
-                        mechanism: MechanismType, param: &P,
-                        key: ObjectHandle) -> Result<(), CryptoInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_DecryptInit(session.into(),
-                                        &init_mechanism(mechanism, param),
-                                        key.into()))
-        })
-    }
-
-    pub fn decrypt(&self, session: SessionHandle,
-                   encrypted_data: &[u8], data: Option<&mut [u8]>)
-                   -> Result<usize, CiphertextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&data);
-            call_ck!(self.C_Decrypt(session.into(), encrypted_data.as_ptr(),
-                                    ck_len(encrypted_data),
-                                    opt_mut_ptr(data), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn decrypt_update(&self, session: SessionHandle,
-                          encrypted_part: &[u8], part: Option<&mut [u8]>)
-                          -> Result<usize, CiphertextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&part);
-            call_ck!(self.C_DecryptUpdate(session.into(),
-                                          encrypted_part.as_ptr(),
-                                          ck_len(encrypted_part),
-                                          opt_mut_ptr(part), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn decrypt_final(&self, session: SessionHandle,
-                         last_part: Option<&mut [u8]>)
-                         -> Result<usize, CiphertextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&last_part);
-            call_ck!(self.C_DecryptFinal(session.into(),
-                                         opt_mut_ptr(last_part),
-                                         &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn digest_init<P>(&self, session: SessionHandle,
-                       mechanism: MechanismType, param: &P)
-                       -> Result<(), DigestInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_DigestInit(session.into(),
-                                       &init_mechanism(mechanism, param)))
-        })
-    }
-
-    pub fn digest(&self, session: SessionHandle,
-                  data: &[u8], digest: Option<&mut [u8]>)
-                  -> Result<usize, DigestError> {
-        Ok(unsafe {
-            let mut res = opt_len(&digest);
-            call_ck!(self.C_Digest(session.into(), data.as_ptr(), ck_len(data),
-                                   opt_mut_ptr(digest), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn digest_update(&self, session: SessionHandle,
-                         part: &[u8]) -> Result<(), ContinuationError> {
-        Ok(unsafe {
-            call_ck!(self.C_DigestUpdate(session.into(), part.as_ptr(),
-                                         ck_len(part)))
-        })
-    }
-
-    pub fn digest_key(&self, session: SessionHandle,
-                      key: ObjectHandle) -> Result<(), DigestKeyError> {
-        Ok(unsafe { call_ck!(self.C_DigestKey(session.into(), key.into())) })
-    }
-
-    pub fn digest_final(&self, session: SessionHandle,
-                        digest: Option<&mut [u8]>)
-                        -> Result<usize, DigestError> {
-        Ok(unsafe {
-            let mut res = opt_len(&digest);
-            call_ck!(self.C_DigestFinal(session.into(), opt_mut_ptr(digest),
-                                        &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn sign_init<P>(&self, session: SessionHandle,
-                        mechanism: MechanismType, param: &P,
-                        key: ObjectHandle) -> Result<(), CryptoInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_SignInit(session.into(),
-                                     &init_mechanism(mechanism, param),
-                                     key.into()))
-        })
-    }
-
-    pub fn sign(&self, session: SessionHandle,
-                data: &[u8], signature: Option<&mut [u8]>)
-                -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&signature);
-            call_ck!(self.C_Sign(session.into(), data.as_ptr(), ck_len(data),
-                                 opt_mut_ptr(signature), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn sign_update(&self, session: SessionHandle,
-                       part: &[u8]) -> Result<(), PlaintextUpdateError> {
-        Ok(unsafe {
-            call_ck!(self.C_SignUpdate(session.into(), part.as_ptr(),
-                                       ck_len(part)));
-        })
-    }
-
-    pub fn sign_final(&self, session: SessionHandle,
-                      signature: Option<&mut [u8]>)
-                      -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&signature);
-            call_ck!(self.C_SignFinal(session.into(), opt_mut_ptr(signature),
-                                      &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn sign_recover_init<P>(&self, session: SessionHandle,
-                                mechanism: MechanismType, param: &P,
-                                key: ObjectHandle)
-                                -> Result<(), CryptoInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_SignRecoverInit(session.into(),
-                                            &init_mechanism(mechanism, param),
-                                            key.into()))
-        })
-    }
-
-    pub fn sign_recover(&self, session: SessionHandle,
-                        data: &[u8], signature: Option<&mut [u8]>)
-                        -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&signature);
-            call_ck!(self.C_SignRecover(session.into(), data.as_ptr(),
-                                        ck_len(data), opt_mut_ptr(signature),
-                                        &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn verify_init<P>(&self, session: SessionHandle,
-                          mechanism: MechanismType, param: &P,
-                          key: ObjectHandle) -> Result<(), CryptoInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_VerifyInit(session.into(),
-                                       &init_mechanism(mechanism, param),
-                                       key.into()))
-        })
-    }
-
-    pub fn verify(&self, session: SessionHandle,
-                  data: &[u8], signature: &[u8]) -> Result<(), VerifyError> {
-        Ok(unsafe {
-            call_ck!(self.C_Verify(session.into(), data.as_ptr(), ck_len(data),
-                                   signature.as_ptr(), ck_len(signature)))
-        })
-    }
-                                        
-    pub fn verify_update(&self, session: SessionHandle,
-                         data: &[u8]) -> Result<(), PlaintextUpdateError> {
-        Ok(unsafe {
-            call_ck!(self.C_VerifyUpdate(session.into(), data.as_ptr(),
-                                         ck_len(data)))
-        })
-    }
-
-    pub fn verify_final(&self, session: SessionHandle,
-                        signature: &[u8]) -> Result<(), VerifyError> {
-        Ok(unsafe {
-            call_ck!(self.C_VerifyFinal(session.into(), signature.as_ptr(),
-                                        ck_len(signature)))
-        })
-    }
-
-    pub fn verify_recover_init<P>(&self, session: SessionHandle,
-                                  mechanism: MechanismType, param: &P,
-                                  key: ObjectHandle)
-                                  -> Result<(), CryptoInitError> {
-        Ok(unsafe {
-            call_ck!(self.C_VerifyRecoverInit(session.into(),
-                                              &init_mechanism(mechanism,
-                                                              param),
-                                              key.into()))
-        })
-    }
-
-    pub fn verify_recover(&self, session: SessionHandle,
-                          signature: &[u8], data: Option<&mut [u8]>)
-                          -> Result<usize, VerifyRecoverError> {
-        Ok(unsafe {
-            let mut res = opt_len(&data);
-            call_ck!(self.C_VerifyRecover(session.into(), signature.as_ptr(),
-                                          ck_len(signature),
-                                          opt_mut_ptr(data), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn digest_encrypt_update(&self, session: SessionHandle,
-                                 part: &[u8],
-                                 encrypted_part: Option<&mut [u8]>)
-                                 -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&encrypted_part);
-            call_ck!(self.C_DigestEncryptUpdate(session.into(), part.as_ptr(),
-                                                ck_len(part),
-                                                opt_mut_ptr(encrypted_part),
-                                                &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn decrypt_digest_update(&self, session: SessionHandle,
-                                 encrypted_part: &[u8],
-                                 part: Option<&mut [u8]>)
-                                 -> Result<usize, CiphertextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&part);
-            call_ck!(self.C_DecryptDigestUpdate(session.into(),
-                                                encrypted_part.as_ptr(),
-                                                ck_len(encrypted_part),
-                                                opt_mut_ptr(part), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn sign_encrypt_update(&self, session: SessionHandle,
-                               part: &[u8],
-                               encrypted_part: Option<&mut [u8]>)
-                               -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&encrypted_part);
-            call_ck!(self.C_SignEncryptUpdate(session.into(), part.as_ptr(),
-                                              ck_len(part),
-                                              opt_mut_ptr(encrypted_part),
-                                              &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn decrypt_verify_update(&self, session: SessionHandle,
-                                 encrypted_part: &[u8],
-                                 part: Option<&mut [u8]>)
-                                 -> Result<usize, PlaintextError> {
-        Ok(unsafe {
-            let mut res = opt_len(&part);
-            call_ck!(self.C_DecryptVerifyUpdate(session.into(),
-                                                encrypted_part.as_ptr(),
-                                                ck_len(encrypted_part),
-                                                opt_mut_ptr(part), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn generate_key<'a, T>(&self, session: SessionHandle,
-                               mechanism: &sys::CK_MECHANISM, template: T)
-                               -> Result<ObjectHandle, CreateKeyError>
-                        where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let mut res = 0;
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_GenerateKey(session.into(), mechanism, ptr, len,
-                                        &mut res));
-            res.into()
-        })
-    }
-
-    /// Returns (public, private).
-    pub fn generate_key_pair<'a, T, U>(&self, session: SessionHandle,
-                                       mechanism: &sys::CK_MECHANISM,
-                                       public_key_template: T,
-                                       private_key_template: U)
-                                       -> Result<(ObjectHandle,
-                                                  ObjectHandle),
-                                                 CreateKeyError>
-                             where T: AsRef<[Attribute<'a>]>,
-                                   U: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let mut res = (0, 0);
-            let (pub_ptr, pub_len) = translate_template(public_key_template);
-            let (prv_ptr, prv_len) = translate_template(private_key_template);
-            call_ck!(self.C_GenerateKeyPair(session.into(), mechanism,
-                                            pub_ptr, pub_len,
-                                            prv_ptr, prv_len,
-                                            &mut res.0, &mut res.1));
-            (res.0.into(), res.1.into())
-        })
-    }
-
-    pub fn wrap_key(&self, session: SessionHandle,
-                    mechanism: &sys::CK_MECHANISM,
-                    wrapping_key: ObjectHandle,
-                    key: ObjectHandle,
-                    wrapped_key: Option<&mut [u8]>)
-                    -> Result<usize, WrapKeyError> {
-        Ok(unsafe {
-            let mut res = opt_len(&wrapped_key);
-            call_ck!(self.C_WrapKey(session.into(), mechanism,
-                                    wrapping_key.into(), key.into(),
-                                    opt_mut_ptr(wrapped_key), &mut res));
-            from_ck_long(res)
-        })
-    }
-
-    pub fn unwrap_key<'a, T>(&self, session: SessionHandle,
-                             mechanism: &sys::CK_MECHANISM,
-                             unwrapping_key: ObjectHandle,
-                             wrapped_key: &[u8], template: T)
-                             -> Result<ObjectHandle, UnwrapKeyError>
-                      where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let mut res = 0;
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_UnwrapKey(session.into(), mechanism,
-                                      unwrapping_key.into(),
-                                      wrapped_key.as_ptr(),
-                                      ck_len(wrapped_key), ptr, len,
-                                      &mut res));
-            res.into()
-        })
-    }
-
-    pub fn derive_key<'a, T>(&self, session: SessionHandle,
-                             mechanism: &sys::CK_MECHANISM,
-                             base_key: ObjectHandle, template: T)
-                             -> Result<ObjectHandle, DeriveKeyError>
-                      where T: AsRef<[Attribute<'a>]> {
-        Ok(unsafe {
-            let mut res = 0;
-            let (ptr, len) = translate_template(template);
-            call_ck!(self.C_DeriveKey(session.into(), mechanism,
-                                      base_key.into(),
-                                      ptr, len, &mut res));
-            res.into()
-        })
-    }
-
-    pub fn seed_random(&self, session: SessionHandle, seed: &[u8])
-                       -> Result<(), SeedRandomError> {
-        Ok(unsafe {
-            call_ck!(self.C_SeedRandom(session.into(), seed.as_ptr(),
-                                       ck_len(seed)))
-        })
-    }
-
-    pub fn generate_random(&self, session: SessionHandle,
-                           random_data: &mut [u8])
-                           -> Result<(), GenerateRandomError> {
-        Ok(unsafe {
-            call_ck!(self.C_GenerateRandom(session.into(),
-                                           random_data.as_mut_ptr(),
-                                           ck_len(random_data)))
-        })
+    pub fn unwrapping_from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_UNWRAPPING_KEY_HANDLE_INVALID
+                => Some(KeyError::KeyHandleInvalid),
+            sys::CKR_UNWRAPPING_KEY_SIZE_RANGE
+                => Some(KeyError::KeySizeRange),
+            sys::CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT
+                => Some(KeyError::KeyTypeInconsistent),
+            _ => None
+        }
     }
 }
 
-fn ck_len<T, R: AsRef<[T]>>(r: R) -> sys::CK_ULONG {
-    to_ck_long(r.as_ref().len())
+
+//------------ MechanismError ------------------------------------------------
+
+/// The selected mechanism is not good enough.
+#[derive(Copy, Clone)]
+pub enum MechanismError {
+    /// The specified mechanism is invalid for this operation.
+    MechanismInvalid,
+
+    /// Invalid parameters were supplied for the mechanism for the operation.
+    MechanismParamInvalid,
+}
+
+impl MechanismError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_MECHANISM_INVALID
+                => Some(MechanismError::MechanismInvalid),
+            sys::CKR_MECHANISM_PARAM_INVALID
+                => Some(MechanismError::MechanismParamInvalid),
+            _ => None
+        }
+    }
 }
 
 
-/// Converts a `usize` to a `CK_ULONG`.
+//------------ PermissionError -----------------------------------------------
+
+/// A operation has failed due to lack of permissions.
 ///
-/// # Panics 
-///
-/// On some targets (such as 64 bit Windows), `CK_ULONG` is 32 bits while
-/// `usize` is 64 bits. On these systems, the function will panic if given
-/// a value that is too large.
-#[inline(always)]
-fn to_ck_long(x: usize) -> sys::CK_ULONG {
-    // XXX Does this get optimized away if both types are identical?
-    assert!(x <= sys::CK_ULONG_MAX as usize);
-    x as sys::CK_ULONG
-}
-
-/// Converts a `CK_ULONG` into a `usize`.
-///
-/// # Assumption
-///
-/// Since `CK_ULONG` is equal to C’s `unsigned long int`, it should never
-/// be bigger than the target’s pointer size and a cast should be safe.
-#[inline(always)]
-fn from_ck_long(x: sys::CK_ULONG) -> usize {
-    x as usize
-}
-
-fn opt_len<T, R: AsRef<[T]>>(r: &Option<R>) -> sys::CK_ULONG {
-    match *r {
-        Some(ref r) => ck_len(r.as_ref()),
-        None => 0
-    }
-}
-
-fn opt_mut_ptr<T, R: AsMut<[T]>>(r: Option<R>) -> *mut T {
-    match r {
-        Some(mut r) => r.as_mut().as_mut_ptr(),
-        None => ptr::null_mut()
-    }
-}
-
-unsafe fn translate_template<'a, T>(t: T) -> (*const sys::CK_ATTRIBUTE,
-                                              sys::CK_ULONG)
-                             where T: AsRef<[Attribute<'a>]> {
-    let template: &[sys::CK_ATTRIBUTE] = mem::transmute(t.as_ref());
-    (template.as_ptr(), ck_len(template))
-}
-
-fn init_mechanism<P>(mechanism: MechanismType, param: &P)
-                     -> sys::CK_MECHANISM {
-    sys::CK_MECHANISM {
-        mechanism: mechanism.into(),
-        pParameter: param as *const P as *const sys::CK_VOID,
-        ulParameterLen: to_ck_long(mem::size_of::<P>())
-    }
-}
-
-
-//------------ CryptokiOnce --------------------------------------------------
-
-struct CryptokiOnce {
-    /// The library this Cryptoki implementation came from.
+/// This type lumps together all specific errors that happen because an
+/// operation that would otherwise probably be fine failed because it was
+/// forbidden either by configuration or policy.
+#[derive(Copy, Clone)]
+pub enum PermissionError {
+    /// The requested action was prohibited.
     ///
-    /// We only hold onto it here so that it doesn’t get unloaded while we
-    /// need it. Normally, we would keep the `Symbol` loaded from it, but we
-    /// only need that to get the function list. So we rather keep the
-    /// library and the raw function list.
-    #[allow(dead_code)]
-    library: Library,
+    /// This is either because of policy reasons or because the action was 
+    /// indeed not allowed for the referenced object.
+    ActionProhibited,
 
-    /// The function list retrieved from the library.
-    ck: *const sys::CK_FUNCTION_LIST,
+    /// The requested information was considered sensitive.
+    InformationSensitive,
+
+    /// A PIN has expired.
+    ///
+    /// The operation can only be carried out once the PIN has been reset
+    /// using the `set_pin()` function.
+    PinExpired,
+
+    /// The specified session is a read-only session.
+    SessionReadOnly,
+
+    /// The token is write-protected.
+    TokenWriteProtected,
+
+    /// The appropriate user was not logged in.
+    UserNotLoggedIn,
 }
 
-impl CryptokiOnce {
-    fn new(lib: Library, args: Option<sys::CK_C_INITIALIZE_ARGS>)
-            -> Result<Self, TokenError> {
-        let ck = unsafe {
-            let get_list: Symbol<sys::CK_C_GetFunctionList> =
-                                        match lib.get(b"C_GetFunctionList") {
-                Ok(list) => list,
-                Err(_) => return Err(sys::CKR_GENERAL_ERROR.into())
-            };
-            let mut list = ptr::null();
-            let res = get_list(&mut list);
-            if res != sys::CKR_OK {
-                return Err(res.into())
-            }
-            let args_ptr = match args {
-                Some(args) => mem::transmute(&args),
-                None => ptr::null()
-            };
-            let res = ((*list).C_Initialize)(args_ptr);
-            // Getting "already initialized" is fine. We can use the same
-            // module more than once ...
-            if res != sys::CKR_OK &&
-               res != sys::CKR_CRYPTOKI_ALREADY_INITIALIZED{
-                return Err(res.into())
-            }
-            list
-        };
-        Ok(CryptokiOnce{library: lib, ck: ck})
-    }
-}
-
-impl Drop for CryptokiOnce {
-    fn drop(&mut self) {
-        unsafe {
-            ((*self.ck).C_Finalize)(ptr::null());
+impl PermissionError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_ACTION_PROHIBITED
+                => Some(PermissionError::ActionProhibited),
+            sys::CKR_INFORMATION_SENSITIVE
+                => Some(PermissionError::InformationSensitive),
+            sys::CKR_PIN_EXPIRED => Some(PermissionError::PinExpired),
+            sys::CKR_SESSION_READ_ONLY
+                => Some(PermissionError::SessionReadOnly),
+            sys::CKR_TOKEN_WRITE_PROTECTED
+                => Some(PermissionError::TokenWriteProtected),
+            sys::CKR_USER_NOT_LOGGED_IN
+                => Some(PermissionError::UserNotLoggedIn),
+            _ => None,
         }
     }
 }
 
 
-//============ Newtypes for Opaque Types =====================================
- 
+//------------ SessionError --------------------------------------------------
 
-//------------ SlotId --------------------------------------------------------
-
-#[derive(Copy, Clone, Debug)]
-pub struct SlotId(sys::CK_SLOT_ID);
-
-impl From<sys::CK_SLOT_ID> for SlotId {
-    fn from(id: sys::CK_SLOT_ID) -> Self {
-        SlotId(id)
-    }
-}
-
-impl From<SlotId> for sys::CK_SLOT_ID {
-    fn from(id: SlotId) -> Self {
-        id.0
-    }
-}
-
-
-//------------ SessionHandle -------------------------------------------------
-
-#[derive(Copy, Clone, Debug)]
-pub struct SessionHandle(sys::CK_SESSION_HANDLE);
-
-impl From<sys::CK_SESSION_HANDLE> for SessionHandle {
-    fn from(handle: sys::CK_SESSION_HANDLE) -> Self {
-        SessionHandle(handle)
-    }
-}
-
-impl From<SessionHandle> for sys::CK_SESSION_HANDLE {
-    fn from(handle: SessionHandle) -> Self {
-        handle.0
-    }
-}
-
-
-//------------ ObjectHandle --------------------------------------------------
-
-#[derive(Copy, Clone, Debug)]
-pub struct ObjectHandle(sys::CK_OBJECT_HANDLE);
-
-impl From<sys::CK_OBJECT_HANDLE> for ObjectHandle {
-    fn from(handle: sys::CK_OBJECT_HANDLE) -> Self {
-        ObjectHandle(handle)
-    }
-}
-
-impl From<ObjectHandle> for sys::CK_OBJECT_HANDLE {
-    fn from(handle: ObjectHandle) -> Self {
-        handle.0
-    }
-}
-
-
-//============ Enums for De-facto Enums ======================================
-
-/// The types of users for trying to log into a token.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum UserType {
-    /// The security officer.
-    So,
-
-    /// A normal user.
-    User,
-
-    /// Context specific user.
-    ContextSpecific,
-}
-
-impl From<UserType> for sys::CK_USER_TYPE {
-    fn from(value: UserType) -> Self {
-        match value {
-            UserType::So => sys::CKU_SO,
-            UserType::User => sys::CKU_USER,
-            UserType::ContextSpecific => sys::CKU_CONTEXT_SPECIFIC,
-        }
-    }
-}
-
-
-//============ Newtypes for Identifying Types ================================
-//
-// These are here for now in order to get rid of the `sys::CK_` prefix and the
-// terrible upper case. Ultimately, we want to provide a sane way to
-// initialize these from known values through some sort of enum.
-//
-// One more advantage of having newtypes is that we have separate types for
-// the separate purposes instead of just lots of type aliases all ending up
-// with `sys::CK_ULONG`.
-
-//------------ MechanismType -------------------------------------------------
-
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct MechanismType(sys::CK_MECHANISM_TYPE);
-
-impl From<sys::CK_MECHANISM_TYPE> for MechanismType {
-    fn from(value: sys::CK_MECHANISM_TYPE) -> Self {
-        MechanismType(value)
-    }
-}
-
-impl From<MechanismType> for sys::CK_MECHANISM_TYPE {
-    fn from(value: MechanismType) -> Self {
-        value.0
-    }
-}
-
-
-//============ Structures ====================================================
-
-//------------ Attribute ----------------------------------------------------
-
-pub struct Attribute<'a> {
-    inner: sys::CK_ATTRIBUTE,
-    marker: PhantomData<&'a u8>,
-}
-
-/// # Creation
+/// An error happened while working with a session.
 ///
-impl<'a> Attribute<'a> {
-    fn new<T: ?Sized>(attr: sys::CK_ATTRIBUTE_TYPE, ptr: *const T, len: usize)
-                      -> Self {
-        Attribute {
-            inner: sys::CK_ATTRIBUTE {
-                aType: attr,
-                pValue: ptr as *const _,
-                ulValueLen: to_ck_long(len)
-            },
-            marker: PhantomData
+/// An error of this category means that the session in question is not
+/// usable anymore. In order to progress, a new session needs to be created.
+#[derive(Copy, Clone)]
+pub enum SessionError {
+    /// The session was invalid at the time that the function was invoked.
+    ///
+    /// This can happen if the session’s token is removed before the function
+    /// invocation, since removing a token closes all sessions with it.
+    SessionHandleInvalid,
+
+    /// The session was closed during the execution of the function.
+    SessionClosed,
+}
+
+impl SessionError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_SESSION_HANDLE_INVALID
+                => Some(SessionError::SessionHandleInvalid),
+            sys::CKR_SESSION_CLOSED => Some(SessionError::SessionClosed),
+            _ => None
         }
-    }
-
-    pub fn from_none(attr: sys::CK_ATTRIBUTE_TYPE) -> Self {
-        Self::new(attr, ptr::null() as *const u8, 0)
-    }
-
-    pub fn from_ref<T>(attr: sys::CK_ATTRIBUTE_TYPE, val: &'a T) -> Self {
-        Self::new(attr, val, mem::size_of::<T>())
-    }
-
-    pub fn from_bytes(attr: sys::CK_ATTRIBUTE_TYPE, value: &'a [u8]) -> Self {
-        Self::new(attr, value.as_ptr(), value.len())
     }
 }
 
-/// # Access to Data
+
+//------------ TemplateError -------------------------------------------------
+
+/// A template supplied to a function was invalid.
+#[derive(Copy, Clone)]
+pub enum TemplateError {
+    /// One of the attributes cannot be set or modified.
+    AttributeReadOnly,
+
+    /// One of the attributes had an invalid type specified. 
+    AttributeTypeInvalid,
+
+    /// One of the attributes had an invalid value.
+    AttributeValueInvalid,
+
+    /// One of the attributes specified a curve not supported by this token.
+    CurveNotSupported,
+
+    /// Invalid or unsupported domain parameters were supplied.
+    DomainParamsInvalid,
+
+    /// The template specified lacks some necessary attributes.
+    TemplateIncomplete,
+
+    /// The template specified has conflicting attributes. 
+    TemplateInconsistent,
+}
+
+impl TemplateError {
+    pub fn from_rv(rv: sys::CK_RV) -> Option<Self> {
+        match rv {
+            sys::CKR_ATTRIBUTE_READ_ONLY
+                => Some(TemplateError::AttributeReadOnly),
+            sys::CKR_ATTRIBUTE_TYPE_INVALID
+                => Some(TemplateError::AttributeTypeInvalid),
+            sys::CKR_ATTRIBUTE_VALUE_INVALID
+                => Some(TemplateError::AttributeValueInvalid),
+            sys::CKR_CURVE_NOT_SUPPORTED
+                => Some(TemplateError::CurveNotSupported),
+            sys::CKR_DOMAIN_PARAMS_INVALID
+                => Some(TemplateError::DomainParamsInvalid),
+            sys::CKR_TEMPLATE_INCOMPLETE
+                => Some(TemplateError::TemplateIncomplete),
+            sys::CKR_TEMPLATE_INCONSISTENT
+                => Some(TemplateError::TemplateInconsistent),
+            _ => None
+        }
+    }
+}
+
+
+//------------ TokenError ---------------------------------------------------
+
+/// An error happened with the library or token.
 ///
-impl<'a> Attribute<'a> {
-    pub fn len(&self) -> Option<usize> {
-        if self.inner.ulValueLen == sys::CK_UNAVAILABLE_INFORMATION {
-            None
-        }
-        else {
-            Some(from_ck_long(self.inner.ulValueLen))
+/// An error of this type means that something reasonably bad or unforeseen
+/// has happened that continuing may not really be advisable.
+#[derive(Copy, Clone)]
+pub enum TokenError {
+    /// Some horrible, unrecoverable error has occurred.
+    ///
+    /// In the worst case, it is possible that the function only partially
+    /// succeeded, and that the computer and/or token is in an inconsistent
+    /// state.
+    GeneralError,
+
+    /// Insufficient memory on the host computer.
+    ///
+    /// The computer that the Cryptoki library is running on has insufficient
+    /// memory to perform the requested function.
+    HostMemory,
+
+    /// The requested function could not be performed.
+    ///
+    /// If the function in question was a session, more detailed information
+    /// may be available through the session info’s device error field.
+    FunctionFailed,
+
+    /// The token does not have sufficient memory to perform the function.
+    DeviceMemory,
+
+    /// Some problem has occurred with the token and/or slot.
+    DeviceError,
+
+    /// The token was not present at the time the function was invoked.
+    TokenNotPresent,
+
+    /// The token was removed from its slot during execution of the function.
+    DeviceRemoved,
+
+    // Further errors specified to happen for functions that we can put here:
+    //
+    // CKR_FUNCTION_CANCELED
+
+    /// The library or slot does not recognize the token in the slot.
+    TokenNotRecognized,
+
+    /// Some other error has occurred.
+    ///
+    /// This error means that the underlying library has returned an error
+    /// that wasn’t allowed for this function by the standard. As this
+    /// means that the state of library and token isn’t well defined anymore,
+    /// it might be advisable to give up.
+    Other(CryptokiError),
+}
+
+impl From<CryptokiError> for TokenError {
+    fn from(err: CryptokiError) -> Self {
+        match err.0 {
+            sys::CKR_DEVICE_ERROR => TokenError::DeviceError,
+            sys::CKR_DEVICE_MEMORY => TokenError::DeviceMemory,
+            sys::CKR_DEVICE_REMOVED => TokenError::DeviceRemoved,
+            sys::CKR_FUNCTION_FAILED => TokenError::FunctionFailed,
+            sys::CKR_GENERAL_ERROR => TokenError::GeneralError,
+            sys::CKR_HOST_MEMORY => TokenError::HostMemory,
+            sys::CKR_TOKEN_NOT_PRESENT => TokenError::TokenNotPresent,
+            sys::CKR_TOKEN_NOT_RECOGNIZED => TokenError::TokenNotRecognized,
+            _ => TokenError::Other(err)
         }
     }
+}
 
-    pub fn bytes(&self) -> Option<&'a [u8]> {
-        if self.inner.pValue == ptr::null() {
-            None
-        }
-        else {
-            self.len().map(|len| unsafe {
-                slice::from_raw_parts(mem::transmute(self.inner.pValue), len)
-            })
-        }
-    }
-
-    pub fn value<T>(&self) -> Option<&T> {
-        self.len().map(|len| unsafe {
-            assert_eq!(mem::size_of::<T>(), len);
-            mem::transmute(self.inner.pValue)
-        })
-    }
-
-    pub fn value_mut<T>(&mut self) -> Option<&mut T> {
-        self.len().map(|len| unsafe {
-            assert_eq!(mem::size_of::<T>(), len);
-            mem::transmute(self.inner.pValue)
-        })
+impl From<sys::CK_RV> for TokenError {
+    fn from(err: sys::CK_RV) -> Self {
+        CryptokiError::from(err).into()
     }
 }
 
@@ -1610,7 +1079,7 @@ impl From<sys::CK_RV> for ContinuationError {
 }
 
 
-///----------- CryptoInitError -----------------------------------------------
+//----------- CryptoInitError ------------------------------------------------
 
 /// An error happened while initializing a crypto operation.
 #[derive(Copy, Clone)]
@@ -1779,7 +1248,7 @@ impl From<sys::CK_RV> for CiphertextError {
 }
 
 
-///----------- DigestInitError -----------------------------------------------
+//----------- DigestInitError ------------------------------------------------
 
 /// An error happened while initializing a digest operation.
 #[derive(Copy, Clone)]
