@@ -6,10 +6,12 @@
 // those glob imports.
 
 pub use self::error::*;
+pub use self::flags::*;
 pub use self::structs::*;
 pub use self::types::*;
 
 mod error;
+mod flags;
 mod once;
 mod structs;
 mod types;
@@ -50,13 +52,17 @@ macro_rules! call_ck {
 
 
 impl Cryptoki {
-    pub fn get_info(&self, info: &mut sys::CK_INFO)
-                    -> Result<(), TokenError> {
+    /// Obtains general information about Cryptoki.
+    pub fn get_info(&self, info: &mut Info) -> Result<(), TokenError> {
         Ok(unsafe {
-            call_ck!(self.C_GetInfo(info));
+            call_ck!(self.C_GetInfo(info.as_mut()));
         })
     }
 
+    /// Returns a list of all the valid slot IDs in the system.
+    ///
+    /// If `token_present` is `true`, only the IDs of slots that currently
+    /// have a token present are returned.
     pub fn get_slot_list(&self, token_present: bool)
                          -> Result<Vec<SlotId>, TokenError> {
         let token_present = if token_present { sys::CK_TRUE }
@@ -73,22 +79,23 @@ impl Cryptoki {
         })
     }
 
-    pub fn get_slot_info(&self, slot_id: SlotId,
-                         info: &mut sys::CK_SLOT_INFO)
+    /// Obtains information about a particular slot in the system.
+    pub fn get_slot_info(&self, slot_id: SlotId, info: &mut SlotInfo)
                        -> Result<(), SlotAccessError> {
         Ok(unsafe {
-            call_ck!(self.C_GetSlotInfo(slot_id.into(), info));
+            call_ck!(self.C_GetSlotInfo(slot_id.into(), info.as_mut()));
         })
     }
 
-    pub fn get_token_info(&self, slot_id: SlotId,
-                          info: &mut sys::CK_TOKEN_INFO)
+    /// Obtains information about a particular token in the system.
+    pub fn get_token_info(&self, slot_id: SlotId, info: &mut TokenInfo)
                         -> Result<(), SlotAccessError> {
         Ok(unsafe {
-            call_ck!(self.C_GetTokenInfo(slot_id.into(), info));
+            call_ck!(self.C_GetTokenInfo(slot_id.into(), info.as_mut()));
         })
     }
 
+    /// Returns a list of the mechanism types supported by a token.
     pub fn get_mechanism_list<T>(&self, slot_id: SlotId)
                                  -> Result<T, SlotAccessError> 
                               where T: iter::FromIterator<MechanismType> {
@@ -105,73 +112,85 @@ impl Cryptoki {
         Ok(T::from_iter(vec.into_iter().map(MechanismType::from)))
     }
 
+    /// Obtains information about a particular mechanism supported by a token.
     pub fn get_mechanism_info(&self, slot_id: SlotId,
                               mechanism: MechanismType,
-                              info: &mut sys::CK_MECHANISM_INFO)
+                              info: &mut MechanismInfo)
                               -> Result<(), GetMechanismInfoError> {
         Ok(unsafe {
             call_ck!(self.C_GetMechanismInfo(slot_id.into(), mechanism.into(),
-                                             info));
+                                             info.as_mut()));
         })
     }
 
-    pub fn init_token(&self, slot_id: SlotId, pin: &str,
+    /// Initializes a token.
+    pub fn init_token(&self, slot_id: SlotId, pin: Option<&str>,
                     label: &str) -> Result<(), InitTokenError> {
         if label.as_bytes().len() != 32 {
-            return Err(InitTokenError::LabelIncorrect)
+            return Err(InitTokenError::LabelInvalid)
         }
+        let (ptr, len) = translate_pin(pin);
         Ok(unsafe {
-            call_ck!(self.C_InitToken(slot_id.into(), pin.as_ptr(),
-                                      ck_len(pin), label.as_ptr()))
+            call_ck!(self.C_InitToken(slot_id.into(), ptr, len,
+                                      label.as_ptr()))
         })
     }
 
-    pub fn init_pin(&self, session: SessionHandle, pin: &str)
+    /// Initializes the normal user’s PIN.
+    pub fn init_pin(&self, session: SessionHandle, pin: Option<&str>)
                   -> Result<(), SetPinError> {
+        let (ptr, len) = translate_pin(pin);
         Ok(unsafe {
-            call_ck!(self.C_InitPIN(session.into(), pin.as_ptr(), ck_len(pin)))
+            call_ck!(self.C_InitPIN(session.into(), ptr, len))
         })
     }
 
-    pub fn set_pin(&self, session: SessionHandle, old_pin: &str,
-                 new_pin: &str) -> Result<(), SetPinError> {
+    /// Modifies the PIN of the user currently logged in.
+    pub fn set_pin(&self, session: SessionHandle, old_pin: Option<&str>,
+                   new_pin: Option<&str>) -> Result<(), SetPinError> {
+        let (oldptr, oldlen) = translate_pin(old_pin);
+        let (newptr, newlen) = translate_pin(new_pin);
         Ok(unsafe {
-            call_ck!(self.C_SetPIN(session.into(), old_pin.as_ptr(),
-                                   ck_len(old_pin), new_pin.as_ptr(),
-                                   ck_len(new_pin)))
+            call_ck!(self.C_SetPIN(session.into(), oldptr, oldlen,
+                                   newptr, newlen))
         })
     }
 
-    pub fn open_session(&self, slot_id: SlotId, flags: sys::CK_FLAGS,
-                        app: *const sys::CK_VOID,
-                        notify: Option<sys::CK_NOTIFY>)
+    /// Opens a sessions between the application and a particular token.
+    pub fn open_session(&self, slot_id: SlotId, flags: SessionFlags)
                         -> Result<SessionHandle, OpenSessionError> {
+        // CKF_SERIAL_SESSION must always be set. Let’s do that here, then.
+        let flags = flags | SessionFlags::serial_session();
         Ok(unsafe {
             let mut handle = 0;
-            call_ck!(self.C_OpenSession(slot_id.into(), flags, app, notify,
-                                        &mut handle));
+            call_ck!(self.C_OpenSession(slot_id.into(), flags.into(),
+                                        ptr::null(), None, &mut handle));
             handle.into()
         })
     }
 
+    /// Closes a session between an application and a token.
     pub fn close_session(&self, session: SessionHandle)
                          -> Result<(), SessionAccessError> {
         Ok(unsafe { call_ck!(self.C_CloseSession(session.into())) })
     }
 
+    /// Closes sessions an application has with a token in the given slot.
     pub fn close_all_sessions(&self, slot_id: SlotId)
                               -> Result<(), SlotAccessError> {
         Ok(unsafe { call_ck!(self.C_CloseAllSessions(slot_id.into())) })
     }
 
+    /// Obtains information about a session.
     pub fn get_session_info(&self, session: SessionHandle,
-                            info: &mut sys::CK_SESSION_INFO)
+                            info: &mut SessionInfo)
                             -> Result<(), SessionAccessError> {
         Ok(unsafe {
-            call_ck!(self.C_GetSessionInfo(session.into(), info));
+            call_ck!(self.C_GetSessionInfo(session.into(), info.as_mut()));
         })
     }
 
+    /// Obtains a copy of the operational state of the session.
     pub fn get_operation_state(&self, session: SessionHandle,
                                state: Option<&mut [u8]>)
                                -> Result<usize, GetOperationStateError> {
@@ -183,6 +202,7 @@ impl Cryptoki {
         })
     }
 
+    /// Restores the operational state of a session.
     pub fn set_operation_state(&self, session: SessionHandle,
                                operation_state: &[u8],
                                encryption_key: Option<ObjectHandle>,
@@ -204,6 +224,7 @@ impl Cryptoki {
         )})
     }
 
+    /// Logs a user into a token.
     pub fn login(&self, session: SessionHandle, user_type: UserType,
                  pin: Option<&str>) -> Result<(), LoginError> {
         let (ptr, len) = match pin {
@@ -215,10 +236,12 @@ impl Cryptoki {
         )})
     }
 
+    /// Logs a user out from a token.
     pub fn logout(&self, session: SessionHandle) -> Result<(), LogoutError> {
         Ok(unsafe { call_ck!(self.C_Logout(session.into())) })
     }
 
+    /// Creates a new object.
     pub fn create_object<'a, T>(&self, session: SessionHandle, template: T)
                                 -> Result<ObjectHandle, CreateObjectError>
                          where T: AsRef<[Attribute<'a>]> {
@@ -230,6 +253,7 @@ impl Cryptoki {
         })
     }
 
+    /// Copies an object.
     pub fn copy_object<'a, T>(&self, session: SessionHandle,
                               object: ObjectHandle, template: T)
                               -> Result<ObjectHandle, CopyObjectError> 
@@ -243,6 +267,7 @@ impl Cryptoki {
         })
     }
 
+    /// Destroys an object.
     pub fn destroy_object(&self, session: SessionHandle, object: ObjectHandle)
                           -> Result<(), ObjectAccessError> {
         Ok(unsafe {
@@ -783,6 +808,14 @@ unsafe fn translate_template<'a, T>(t: T) -> (*const sys::CK_ATTRIBUTE,
                              where T: AsRef<[Attribute<'a>]> {
     let template: &[sys::CK_ATTRIBUTE] = mem::transmute(t.as_ref());
     (template.as_ptr(), ck_len(template))
+}
+
+fn translate_pin(pin: Option<&str>)
+                 -> (*const sys::CK_UTF8CHAR, sys::CK_ULONG) {
+    match pin {
+        Some(pin) => (pin.as_ptr(), ck_len(pin)),
+        None => (ptr::null(), 0)
+    }
 }
 
 fn init_mechanism<P>(mechanism: MechanismType, param: &P)

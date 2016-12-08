@@ -201,7 +201,7 @@ impl fmt::Display for CryptokiError {
 //------------ KeyError ------------------------------------------------------
 
 /// A key was not good enough.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum KeyError {
     /// The specified key is not allowed for the attempted operation.
     KeyFunctionNotPermitted,
@@ -255,7 +255,7 @@ impl KeyError {
 //------------ MechanismError ------------------------------------------------
 
 /// The selected mechanism is not good enough.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum MechanismError {
     /// The specified mechanism is invalid for this operation.
     MechanismInvalid,
@@ -284,7 +284,7 @@ impl MechanismError {
 /// This type lumps together all specific errors that happen because an
 /// operation that would otherwise probably be fine failed because it was
 /// forbidden either by configuration or policy.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum PermissionError {
     /// The requested action was prohibited.
     ///
@@ -337,7 +337,7 @@ impl PermissionError {
 ///
 /// An error of this category means that the session in question is not
 /// usable anymore. In order to progress, a new session needs to be created.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum SessionError {
     /// The session was invalid at the time that the function was invoked.
     ///
@@ -364,7 +364,7 @@ impl SessionError {
 //------------ TemplateError -------------------------------------------------
 
 /// A template supplied to a function was invalid.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum TemplateError {
     /// One of the attributes cannot be set or modified.
     AttributeReadOnly,
@@ -417,7 +417,7 @@ impl TemplateError {
 ///
 /// An error of this type means that something reasonably bad or unforeseen
 /// has happened that continuing may not really be advisable.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum TokenError {
     /// Some horrible, unrecoverable error has occurred.
     ///
@@ -494,7 +494,7 @@ impl From<sys::CK_RV> for TokenError {
 //------------ SlotAccessError -----------------------------------------------
 
 /// An error happened during functions that query slot-related information.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum SlotAccessError {
     /// The slot ID given does not refer to an exisiting slot.
     SlotIdInvalid,
@@ -516,7 +516,7 @@ impl From<sys::CK_RV> for SlotAccessError {
 //------------ GetMechanismInfoError -----------------------------------------
 
 /// An error happened during the `Cryptoki::get_mechanism_info()` method.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum GetMechanismInfoError {
     /// The mechanism type given is not supported by the token.
     InvalidMechanism,
@@ -543,10 +543,10 @@ impl From<sys::CK_RV> for GetMechanismInfoError {
 //------------ InitTokenError -----------------------------------------------
 
 /// An error happened during the `Cryptoki::init_token()` method.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum InitTokenError {
     /// The label is not exactly 32 bytes long.
-    LabelIncorrect,
+    LabelInvalid,
 
     /// The specified PIN does not match the PIN stored in the token.
     PinIncorrect,
@@ -674,7 +674,7 @@ impl From<sys::CK_RV> for OpenSessionError {
 //------------ SessionAccessError --------------------------------------------
 
 /// An error happened when closing a session.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum SessionAccessError {
     /// A session error occurred.
     Session(SessionError),
@@ -878,7 +878,7 @@ impl From<sys::CK_RV> for LogoutError {
 //------------ CreateObjectError ---------------------------------------------
 
 /// An error happened when creating an object.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum CreateObjectError {
     Template(TemplateError),
     Permission(PermissionError),
@@ -907,7 +907,7 @@ impl From<sys::CK_RV> for CreateObjectError {
 //------------ CopyObjectError -----------------------------------------------
 
 /// An error happened when copying an object.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum CopyObjectError {
     /// The specified object handle is not valid.
     ObjectHandleInvalid,
@@ -943,7 +943,7 @@ impl From<sys::CK_RV> for CopyObjectError {
 //------------ ObjectAccessError ---------------------------------------------
 
 /// An error happened while trying to access an object.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ObjectAccessError {
     /// The specified object handle is not valid.
     ObjectHandleInvalid,
@@ -1018,7 +1018,7 @@ impl From<sys::CK_RV> for GetAttributeValueError {
 //------------ FindObjectsInitError ------------------------------------------
 
 /// An error happened while initializing a search for objects.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum FindObjectsInitError {
     /// A search operation is already ongoing within this session.
     OperationActive,
@@ -1082,7 +1082,7 @@ impl From<sys::CK_RV> for ContinuationError {
 //----------- CryptoInitError ------------------------------------------------
 
 /// An error happened while initializing a crypto operation.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum CryptoInitError {
     /// An exclusive operation is already active on this session. 
     OperationActive,
@@ -1251,7 +1251,7 @@ impl From<sys::CK_RV> for CiphertextError {
 //----------- DigestInitError ------------------------------------------------
 
 /// An error happened while initializing a digest operation.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum DigestInitError {
     /// An exclusive operation is already active on this session. 
     OperationActive,
@@ -1318,7 +1318,7 @@ impl From<sys::CK_RV> for DigestError {
 //------------ DigestKeyError ------------------------------------------------
 
 /// An error happened while digesting a key.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum DigestKeyError {
     /// The given key cannot be digested for some reason.
     ///
@@ -1461,7 +1461,7 @@ impl From<sys::CK_RV> for VerifyRecoverError {
 //------------ CreateKeyError ---------------------------------------------
 
 /// An error happened when creating an object.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum CreateKeyError {
     Template(TemplateError),
     Mechanism(MechanismError),
@@ -1494,7 +1494,7 @@ impl From<sys::CK_RV> for CreateKeyError {
 //------------ WrapKeyError --------------------------------------------------
 
 /// An error happened when wrapping a key.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum WrapKeyError {
     /// The supplied buffer was too small.
     BufferTooSmall,
@@ -1551,7 +1551,7 @@ impl From<sys::CK_RV> for WrapKeyError {
 //------------ UnwrapKeyError ------------------------------------------------
 
 /// An error happened when wrapping a key.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum UnwrapKeyError {
     /// The supplied buffer was too small.
     BufferTooSmall,
@@ -1608,7 +1608,7 @@ impl From<sys::CK_RV> for UnwrapKeyError {
 //------------ DeriveKeyError ------------------------------------------------
 
 /// An error occurred while deriving a key.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum DeriveKeyError {
     /// An operation is currently active and needs to be finished first.
     OperationActive,
