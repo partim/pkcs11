@@ -232,8 +232,8 @@ pub const CKF_USER_PIN_INITIALIZED: CK_FLAGS = 8;
 /// Restore key not needed.
 ///
 /// If it is set, that means that *every* time the state of cryptographic
-/// operations of a session us successfully saved, all keys needed to
-/// continue thos operations are stored in the state.
+/// operations of a session is successfully saved, all keys needed to
+/// continue this operations are stored in the state.
 pub const CKF_RESTORE_KEY_NOT_NEEDED: CK_FLAGS = 0x20;
 
 /// Clock on token.
@@ -352,10 +352,10 @@ pub struct CK_SESSION_INFO {
 }
 
 /// Session is r/w.
-pub const CFK_RW_SESSION: CK_FLAGS = 2;
+pub const CKF_RW_SESSION: CK_FLAGS = 2;
 
 /// No parallel.
-pub const CFK_SERIAL_SESSION: CK_FLAGS = 4;
+pub const CKF_SERIAL_SESSION: CK_FLAGS = 4;
 
 /// A token-specific identifier for an object.
 pub type CK_OBJECT_HANDLE = CK_ULONG;
@@ -1025,7 +1025,7 @@ pub struct CK_MECHANISM {
 
 /// Provides information about a partiuclar mechanism
 #[repr(C)]
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CK_MECHANISM_INFO {
     pub ulMinKeySize: CK_ULONG,
     pub ulMaxKeySize: CK_ULONG,
