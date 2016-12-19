@@ -187,11 +187,7 @@ impl SessionInfo {
 
     /// Returns the state of the session.
     pub fn state(&self) -> State {
-        // The unwrap here is somewhat unfortunate. However, since the only
-        // way to create a value of this type is via
-        // `Cryptoki::get_session_info()` and that checks already, it ought
-        // to be okay.
-        State::try_from(self.0.state).unwrap()
+        State::from(self.0.state)
     }
 
     /// Returns the flags that define the type of the session.
