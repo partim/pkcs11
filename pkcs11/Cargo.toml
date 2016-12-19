@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Martin Hoffmann <hn@nvnc.de>"]
 
 [dependencies]
-libc = "0.2"
+libc       = "0.2"
 libloading = "0.3"
 pkcs11-sys = { version = "0.1.0", path = "../pkcs11-sys" }
+
+[dev-dependencies]
+tempdir = "0.3.5"

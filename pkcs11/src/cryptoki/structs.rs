@@ -4,8 +4,8 @@ use std::borrow::Cow;
 use std::marker::PhantomData;
 use pkcs11_sys as sys;
 use super::{from_ck_long, to_ck_long};
-use super::{SlotId, State};
-use super::{MechanismInfoFlags, SessionFlags, SlotInfoFlags, TokenInfoFlags};
+use super::{AttributeType, SlotId, State};
+use super::{MechanismFlags, SessionFlags, SlotFlags, TokenFlags};
 
 
 //------------ Attribute -----------------------------------------------------
@@ -15,14 +15,12 @@ pub struct Attribute<'a> {
     marker: PhantomData<&'a u8>,
 }
 
-/// # Creation
-///
 impl<'a> Attribute<'a> {
-    fn new<T: ?Sized>(attr: sys::CK_ATTRIBUTE_TYPE, ptr: *const T, len: usize)
+    fn new<T: ?Sized>(attr: AttributeType, ptr: *const T, len: usize)
                       -> Self {
         Attribute {
             inner: sys::CK_ATTRIBUTE {
-                aType: attr,
+                aType: attr.into(),
                 pValue: ptr as *const _,
                 ulValueLen: to_ck_long(len)
             },
@@ -30,22 +28,22 @@ impl<'a> Attribute<'a> {
         }
     }
 
-    pub fn from_none(attr: sys::CK_ATTRIBUTE_TYPE) -> Self {
+    pub fn from_none(attr: AttributeType) -> Self {
         Self::new(attr, ptr::null() as *const u8, 0)
     }
 
-    pub fn from_ref<T>(attr: sys::CK_ATTRIBUTE_TYPE, val: &'a T) -> Self {
+    pub fn from_ref<T>(attr: AttributeType, val: &'a T) -> Self {
         Self::new(attr, val, mem::size_of::<T>())
     }
 
-    pub fn from_bytes(attr: sys::CK_ATTRIBUTE_TYPE, value: &'a [u8]) -> Self {
+    pub fn from_bytes(attr: AttributeType, value: &'a [u8]) -> Self {
         Self::new(attr, value.as_ptr(), value.len())
     }
-}
 
-/// # Access to Data
-///
-impl<'a> Attribute<'a> {
+    pub fn from_bool(attr: AttributeType, value: bool) -> Self {
+        Self::from_ref(attr, if value { &CK_TRUE } else { &CK_FALSE })
+    }
+
     pub fn len(&self) -> Option<usize> {
         if self.inner.ulValueLen == sys::CK_UNAVAILABLE_INFORMATION {
             None
@@ -80,6 +78,14 @@ impl<'a> Attribute<'a> {
         })
     }
 }
+
+
+//------------ A True and False Static ---------------------------------------
+//
+// These are used to build boolean attribute values on the fly.
+
+static CK_TRUE: sys::CK_BBOOL = sys::CK_TRUE;
+static CK_FALSE: sys::CK_BBOOL = sys::CK_FALSE;
 
 
 //------------ Info ----------------------------------------------------------
@@ -155,7 +161,7 @@ impl MechanismInfo {
     }
 
     /// Returns the flags specifying mechanism capabilities.
-    pub fn flags(&self) -> MechanismInfoFlags {
+    pub fn flags(&self) -> MechanismFlags {
         self.0.flags.into()
     }
 }
@@ -250,7 +256,7 @@ impl SlotInfo {
     }
 
     /// Returns flags that provide the capabilities of the slot.
-    pub fn flags(&self) -> SlotInfoFlags {
+    pub fn flags(&self) -> SlotFlags {
         self.0.flags.into()
     }
 }
@@ -304,7 +310,7 @@ impl TokenInfo {
     }
 
     /// Returns the flags indicating capabilities and status of the device.
-    pub fn flags(&self) -> TokenInfoFlags {
+    pub fn flags(&self) -> TokenFlags {
         self.0.flags.into()
     }
 

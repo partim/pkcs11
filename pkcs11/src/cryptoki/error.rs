@@ -1,6 +1,6 @@
 //! Error handling.
 
-use std::{error, fmt};
+use std::{error, fmt, io};
 use pkcs11_sys as sys;
 
 
@@ -491,6 +491,27 @@ impl From<sys::CK_RV> for TokenError {
 
 //============ Method-specific Errors ========================================
 
+//------------ LoadError -----------------------------------------------------
+
+#[derive(Debug)]
+pub enum LoadError {
+    Token(TokenError),
+    Io(io::Error),
+}
+
+impl From<TokenError> for LoadError {
+    fn from(err: TokenError) -> Self {
+        LoadError::Token(err)
+    }
+}
+
+impl From<io::Error> for LoadError {
+    fn from(err: io::Error) -> Self {
+        LoadError::Io(err)
+    }
+}
+
+
 //------------ SlotAccessError -----------------------------------------------
 
 /// An error happened during functions that query slot-related information.
@@ -585,7 +606,7 @@ impl From<sys::CK_RV> for InitTokenError {
 //------------ SetPinError --------------------------------------------------
 
 /// An error happened while initializing or setting a PIN.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum SetPinError {
     /// The specified PIN has invalid characters in it.
     PinInvalid,
@@ -633,7 +654,7 @@ impl From<sys::CK_RV> for SetPinError {
 //------------ OpenSessionError ----------------------------------------------
 
 /// An error happened while opening a session.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum OpenSessionError {
     /// Either too many sessions or too many read/write sessions already open.
     SessionCount,
@@ -698,7 +719,7 @@ impl From<sys::CK_RV> for SessionAccessError {
 //------------ GetOperationStateError ---------------------------------------
 
 /// An error happened when trying to get the operation state.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum GetOperationStateError {
     /// The output is too large to fit in the supplied buffer.
     BufferTooSmall,
@@ -739,7 +760,7 @@ impl From<sys::CK_RV> for GetOperationStateError {
 //------------ SetOperationStateError ---------------------------------------
 
 /// An error happened while trying to set the operation state.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum SetOperationStateError {
     /// One of the keys specified is not the one used in the saved session.
     KeyChanged,
@@ -784,7 +805,7 @@ impl From<sys::CK_RV> for SetOperationStateError {
 
 /// An error has occurred whil trying to log in.
 // XXX Might be useful to break this into temporary and permanent errors.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum LoginError {
     /// A context specific login was not properly prepared.
     OperationNotInitialized,
@@ -848,7 +869,7 @@ impl From<sys::CK_RV> for LoginError {
 //------------ LogoutError ---------------------------------------------------
 
 /// An error happened while logging out.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum LogoutError {
     /// A user is not logged in.
     UserNotLoggedIn,
@@ -975,7 +996,7 @@ impl From<sys::CK_RV> for ObjectAccessError {
 //------------ GetAttributeValueError ---------------------------------------
 
 /// An error happened while trying to get attribute values.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum GetAttributeValueError {
     /// At least one of the attributes was considered sensitive.
     AttributeSensitive,
@@ -1054,7 +1075,7 @@ impl From<sys::CK_RV> for FindObjectsInitError {
 //------------ ContinuationError --------------------------------------------
 
 /// An error happened during searching for objects.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ContinuationError {
     /// The operation has not been previously initialized.
     OperationNotInitialized,
@@ -1121,7 +1142,7 @@ impl From<sys::CK_RV> for CryptoInitError {
 //------------ PlaintextError ------------------------------------------------
 
 /// An error happened while performing an operation with plaintext input.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum PlaintextError {
     /// The supplied buffer was too small.
     BufferTooSmall,
@@ -1165,7 +1186,7 @@ impl From<sys::CK_RV> for PlaintextError {
 //------------ PlaintextUpdateError ------------------------------------------
 
 /// An error happened while performing an operation with plaintext input.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum PlaintextUpdateError {
     /// The plaintext input data to a cryptographic operation is invalid.
     DataInvalid,
@@ -1205,7 +1226,7 @@ impl From<sys::CK_RV> for PlaintextUpdateError {
 //------------ CiphertextError -----------------------------------------------
 
 /// An error happened while performing an operation with ciphertext input.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum CiphertextError {
     /// The supplied buffer was too small.
     BufferTooSmall,
@@ -1286,7 +1307,7 @@ impl From<sys::CK_RV> for DigestInitError {
 //------------ DigestError ---------------------------------------------------
 
 /// An error happened while performing an operation with ciphertext input.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum DigestError {
     /// The supplied buffer was too small.
     BufferTooSmall,
@@ -1357,7 +1378,7 @@ impl From<sys::CK_RV> for DigestKeyError {
 //------------ VerifyError ------------------------------------------
 
 /// An error happened while performing an operation with plaintext input.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum VerifyError {
     /// The plaintext input data to a cryptographic operation is invalid.
     DataInvalid,
@@ -1406,7 +1427,7 @@ impl From<sys::CK_RV> for VerifyError {
 //------------ VerifyRecoverError -----------------------------------
 
 /// An error happened while performing an operation with plaintext input.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum VerifyRecoverError {
     /// The supplied buffer was too small.
     BufferTooSmall,
@@ -1651,7 +1672,7 @@ impl From<sys::CK_RV> for DeriveKeyError {
 //------------ SeedRandomError -----------------------------------------------
 
 /// An error happened while seeding the token’s random number generator.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum SeedRandomError {
     OperationActive,
     RandomSeedNotSupported,
@@ -1685,7 +1706,7 @@ impl From<sys::CK_RV> for SeedRandomError {
 //------------ GenerateRandomError -------------------------------------------
 
 /// An error happened while generating random data.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum GenerateRandomError {
     OperationActive,
     RandomNoRng,

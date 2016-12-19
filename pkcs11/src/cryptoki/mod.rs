@@ -3,14 +3,16 @@
 //============ Re-exports ====================================================
 //
 // These sub-modules only exist to keep the file size under control. Hence
-// those glob imports.
+// those glob imports. The only exception is error, which is a pub mod so as
+// to allow glob importing (or not at all importing) all the errors at once.
 
 pub use self::error::*;
 pub use self::flags::*;
 pub use self::structs::*;
 pub use self::types::*;
 
-mod error;
+pub mod error;
+
 mod flags;
 mod once;
 mod structs;
@@ -20,6 +22,7 @@ mod types;
 //============ Actual Content ================================================
 
 use std::{iter, mem, ptr};
+use std::path::Path;
 use std::sync::Arc;
 use libloading::Library;
 use pkcs11_sys as sys;
@@ -37,6 +40,16 @@ impl Cryptoki {
     pub fn new(lib: Library, args: Option<sys::CK_C_INITIALIZE_ARGS>)
                -> Result<Self, TokenError> {
         CryptokiOnce::new(lib, args).map(|ck| Cryptoki{inner: Arc::new(ck)})
+    }
+
+    pub fn load<P: AsRef<Path>>(lib_path: P) -> Result<Self, LoadError> {
+        let lib = Library::new(lib_path.as_ref().as_os_str())?;
+        let args = sys::CK_C_INITIALIZE_ARGS {
+            CreateMutex: None, DestroyMutex: None, LockMutex: None,
+            UnlockMutex: None, flags: sys::CKF_OS_LOCKING_OK,
+            pReserved: ptr::null()
+        };
+        Ok(Self::new(lib, Some(args))?)
     }
 }
 
@@ -654,14 +667,17 @@ impl Cryptoki {
         })
     }
 
-    pub fn generate_key<'a, T>(&self, session: SessionHandle,
-                               mechanism: &sys::CK_MECHANISM, template: T)
+    pub fn generate_key<'a, P, T>(&self, session: SessionHandle,
+                               mechanism: MechanismType, param: &P,
+                               template: T)
                                -> Result<ObjectHandle, CreateKeyError>
                         where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
             let (ptr, len) = translate_template(template);
-            call_ck!(self.C_GenerateKey(session.into(), mechanism, ptr, len,
+            call_ck!(self.C_GenerateKey(session.into(),
+                                        &init_mechanism(mechanism, param),
+                                        ptr, len,
                                         &mut res));
             res.into()
         })

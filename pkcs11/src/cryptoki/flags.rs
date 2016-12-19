@@ -1,3 +1,4 @@
+//! Newtypes for the various usages of flags.
 
 use std::ops;
 use pkcs11_sys as sys;
