@@ -488,6 +488,37 @@ impl From<sys::CK_RV> for TokenError {
     }
 }
 
+impl error::Error for TokenError {
+    fn description(&self) -> &str {
+        use self::TokenError::*;
+
+        match *self {
+            DeviceError => "device error",
+            DeviceMemory => "device memory",
+            DeviceRemoved => "device removed",
+            FunctionFailed => "function failed",
+            GeneralError => "general error",
+            HostMemory => "host memory",
+            TokenNotPresent => "token not present",
+            TokenNotRecognized => "token not recognized",
+            Other(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            TokenError::Other(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for TokenError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //============ Method-specific Errors ========================================
 
@@ -508,6 +539,28 @@ impl From<TokenError> for LoadError {
 impl From<io::Error> for LoadError {
     fn from(err: io::Error) -> Self {
         LoadError::Io(err)
+    }
+}
+
+impl error::Error for LoadError {
+    fn description(&self) -> &str {
+        match *self {
+            LoadError::Token(ref err) => err.description(),
+            LoadError::Io(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            LoadError::Token(ref err) => Some(err),
+            LoadError::Io(ref err) => Some(err)
+        }
+    }
+}
+
+impl fmt::Display for LoadError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
