@@ -251,6 +251,25 @@ impl KeyError {
     }
 }
 
+impl error::Error for KeyError {
+    fn description(&self) -> &str {
+        use self::KeyError::*;
+
+        match *self {
+            KeyFunctionNotPermitted => "function not permitted for key",
+            KeyHandleInvalid => "key handle invalid",
+            KeySizeRange => "key size out of range",
+            KeyTypeInconsistent => "key type not consistent with mechanism",
+        }
+    }
+}
+
+impl fmt::Display for KeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ MechanismError ------------------------------------------------
 
@@ -273,6 +292,23 @@ impl MechanismError {
                 => Some(MechanismError::MechanismParamInvalid),
             _ => None
         }
+    }
+}
+
+impl error::Error for MechanismError {
+    fn description(&self) -> &str {
+        use self::MechanismError::*;
+
+        match *self {
+            MechanismInvalid => "mechanism invalid",
+            MechanismParamInvalid => "mechanism parameter invalid",
+        }
+    }
+}
+
+impl fmt::Display for MechanismError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -330,6 +366,27 @@ impl PermissionError {
     }
 }
 
+impl error::Error for PermissionError {
+    fn description(&self) -> &str {
+        use self::PermissionError::*;
+
+        match *self {
+            ActionProhibited => "action prohibited",
+            InformationSensitive => "information sensitive",
+            PinExpired => "PIN expired",
+            SessionReadOnly => "session read-only",
+            TokenWriteProtected => "token write-protected",
+            UserNotLoggedIn => "user not logged in"
+        }
+    }
+}
+
+impl fmt::Display for PermissionError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ SessionError --------------------------------------------------
 
@@ -357,6 +414,23 @@ impl SessionError {
             sys::CKR_SESSION_CLOSED => Some(SessionError::SessionClosed),
             _ => None
         }
+    }
+}
+
+impl error::Error for SessionError {
+    fn description(&self) -> &str {
+        use self::SessionError::*;
+
+        match *self {
+            SessionHandleInvalid => "session handle invalid",
+            SessionClosed => "session closed",
+        }
+    }
+}
+
+impl fmt::Display for SessionError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -407,6 +481,28 @@ impl TemplateError {
                 => Some(TemplateError::TemplateInconsistent),
             _ => None
         }
+    }
+}
+
+impl error::Error for TemplateError {
+    fn description(&self) -> &str {
+        use self::TemplateError::*;
+
+        match *self {
+            AttributeReadOnly => "attribute read-only",
+            AttributeTypeInvalid => "attribute type invalid",
+            AttributeValueInvalid => "attribute value invalid",
+            CurveNotSupported => "curve not supported",
+            DomainParamsInvalid => "domain parameters invalid",
+            TemplateIncomplete => "template incomplete",
+            TemplateInconsistent => "template inconsistend",
+        }
+    }
+}
+
+impl fmt::Display for TemplateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -586,6 +682,30 @@ impl From<sys::CK_RV> for SlotAccessError {
     }
 }
 
+impl error::Error for SlotAccessError {
+    fn description(&self) -> &str {
+        use self::SlotAccessError::*;
+
+        match *self {
+            SlotIdInvalid => "slot ID invalid",
+            Token(ref err) => err.description()
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            SlotAccessError::Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for SlotAccessError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ GetMechanismInfoError -----------------------------------------
 
@@ -610,6 +730,31 @@ impl From<sys::CK_RV> for GetMechanismInfoError {
             sys::CKR_SLOT_ID_INVALID => GetMechanismInfoError::SlotIdInvalid,
             _ => GetMechanismInfoError::Token(err.into())
         }
+    }
+}
+
+impl error::Error for GetMechanismInfoError {
+    fn description(&self) -> &str {
+        use self::GetMechanismInfoError::*;
+
+        match *self {
+            InvalidMechanism => "invalid mechanism",
+            SlotIdInvalid => "slot ID invalid",
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            GetMechanismInfoError::Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for GetMechanismInfoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -652,6 +797,35 @@ impl From<sys::CK_RV> for InitTokenError {
                 => InitTokenError::TokenWriteProtected,
             _ => InitTokenError::Token(err.into())
         }
+    }
+}
+
+impl error::Error for InitTokenError {
+    fn description(&self) -> &str {
+        use self::InitTokenError::*;
+
+        match *self {
+            LabelInvalid => "label invalid",
+            PinIncorrect => "PIN incorrect",
+            PinLocked => "PIN locked",
+            SessionExists => "session exists",
+            SlotIdInvalid => "slot ID invalid",
+            TokenWriteProtected => "token write-protected",
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            InitTokenError::Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for InitTokenError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -703,6 +877,39 @@ impl From<sys::CK_RV> for SetPinError {
     }
 }
 
+impl error::Error for SetPinError {
+    fn description(&self) -> &str {
+        use self::SetPinError::*;
+
+        match *self {
+            PinInvalid => "PIN invalid",
+            PinIncorrect => "PIN incorrect",
+            PinLenRange => "PIN length range",
+            PinLocked => "PIN locked",
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::SetPinError::*;
+
+        match *self {
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for SetPinError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ OpenSessionError ----------------------------------------------
 
@@ -744,6 +951,36 @@ impl From<sys::CK_RV> for OpenSessionError {
     }
 }
 
+impl error::Error for OpenSessionError {
+    fn description(&self) -> &str {
+        use self::OpenSessionError::*;
+
+        match *self {
+            SessionCount => "session count",
+            SessionReadWriteSoExists => "read-write SO session exists",
+            SlotIdInvalid => "slot ID invalid",
+            Permission(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::OpenSessionError::*;
+
+        match *self {
+            Permission(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for OpenSessionError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ SessionAccessError --------------------------------------------
 
@@ -765,6 +1002,28 @@ impl From<sys::CK_RV> for SessionAccessError {
         else {
             SessionAccessError::Token(TokenError::from(err))
         }
+    }
+}
+
+impl error::Error for SessionAccessError {
+    fn description(&self) -> &str {
+        match *self {
+            SessionAccessError::Session(ref err) => err.description(),
+            SessionAccessError::Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            SessionAccessError::Session(ref err) => Some(err),
+            SessionAccessError::Token(ref err) => Some(err),
+        }
+    }
+}
+
+impl fmt::Display for SessionAccessError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -809,6 +1068,36 @@ impl From<sys::CK_RV> for GetOperationStateError {
     }
 }
 
+impl error::Error for GetOperationStateError {
+    fn description(&self) -> &str {
+        use self::GetOperationStateError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            OperationNotInitialized => "operation not initialized",
+            StateUnsaveable => "state unsaveable",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+    
+    fn cause(&self) -> Option<&error::Error> {
+        use self::GetOperationStateError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for GetOperationStateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ SetOperationStateError ---------------------------------------
 
@@ -850,6 +1139,37 @@ impl From<sys::CK_RV> for SetOperationStateError {
                 _ => SetOperationStateError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for SetOperationStateError {
+    fn description(&self) -> &str {
+        use self::SetOperationStateError::*;
+
+        match *self {
+            KeyChanged => "key changed",
+            KeyNeeded => "key needed",
+            KeyNotNeeded => "key not needed",
+            SavedStateInvalid => "saved state invalid",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::SetOperationStateError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for SetOperationStateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -918,6 +1238,41 @@ impl From<sys::CK_RV> for LoginError {
     }
 }
 
+impl error::Error for LoginError {
+    fn description(&self) -> &str {
+        use self::LoginError::*;
+
+        match *self {
+            OperationNotInitialized => "operation not initialized",
+            PinIncorrect => "PIN incorrect",
+            PinLocked => "PIN locked",
+            SessionReadOnlyExists => "read-only session exists",
+            UserAlreadyLoggedIn => "user already logged in",
+            UserAnotherAlreadyLoggedIn => "another user already logged in",
+            UserPinNotInitialized => "user PIN not initialized",
+            UserTooManyTypes => "too many user types",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::LoginError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for LoginError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ LogoutError ---------------------------------------------------
 
@@ -948,6 +1303,34 @@ impl From<sys::CK_RV> for LogoutError {
     }
 }
 
+impl error::Error for LogoutError {
+    fn description(&self) -> &str {
+        use self::LogoutError::*;
+
+        match *self {
+            UserNotLoggedIn => "user not logged in",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+    
+    fn cause(&self) -> Option<&error::Error> {
+        use self::LogoutError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for LogoutError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ CreateObjectError ---------------------------------------------
 
@@ -974,6 +1357,36 @@ impl From<sys::CK_RV> for CreateObjectError {
         else {
             CreateObjectError::Token(TokenError::from(err))
         }
+    }
+}
+
+impl error::Error for CreateObjectError {
+    fn description(&self) -> &str {
+        use self::CreateObjectError::*;
+
+        match *self {
+            Template(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::CreateObjectError::*;
+
+        match *self {
+            Template(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+        }
+    }
+}
+
+impl fmt::Display for CreateObjectError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1013,6 +1426,38 @@ impl From<sys::CK_RV> for CopyObjectError {
     }
 }
 
+impl error::Error for CopyObjectError {
+    fn description(&self) -> &str {
+        use self::CopyObjectError::*;
+
+        match *self {
+            ObjectHandleInvalid => "object handle invalid",
+            Template(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::CopyObjectError::*;
+
+        match *self {
+            Template(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for CopyObjectError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ ObjectAccessError ---------------------------------------------
 
@@ -1044,6 +1489,37 @@ impl From<sys::CK_RV> for ObjectAccessError {
         }
     }
 }
+
+impl error::Error for ObjectAccessError {
+    fn description(&self) -> &str {
+        use self::ObjectAccessError::*;
+
+        match *self {
+            ObjectHandleInvalid => "object handle invalid",
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::ObjectAccessError::*;
+
+        match *self {
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for ObjectAccessError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+            
 
 
 //------------ GetAttributeValueError ---------------------------------------
@@ -1088,6 +1564,37 @@ impl From<sys::CK_RV> for GetAttributeValueError {
     }
 }
 
+impl error::Error for GetAttributeValueError {
+    fn description(&self) -> &str {
+        use self::GetAttributeValueError::*;
+
+        match *self {
+            AttributeSensitive => "attribute sensitive",
+            AttributeTypeInvalid => "attribute type invalid",
+            BufferTooSmall => "buffer too small",
+            ObjectHandleInvalid => "object handle invalid",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::GetAttributeValueError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for GetAttributeValueError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ FindObjectsInitError ------------------------------------------
 
@@ -1124,6 +1631,38 @@ impl From<sys::CK_RV> for FindObjectsInitError {
     }
 }
 
+impl error::Error for FindObjectsInitError {
+    fn description(&self) -> &str {
+        use self::FindObjectsInitError::*;
+
+        match *self {
+            OperationActive => "operation active",
+            Template(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::FindObjectsInitError::*;
+
+        match *self {
+            Template(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for FindObjectsInitError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ ContinuationError --------------------------------------------
 
@@ -1149,6 +1688,34 @@ impl From<sys::CK_RV> for ContinuationError {
                 _ => ContinuationError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for ContinuationError {
+    fn description(&self) -> &str {
+        use self::ContinuationError::*;
+
+        match *self {
+            OperationNotInitialized => "operation not initialized",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::ContinuationError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for ContinuationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1188,6 +1755,40 @@ impl From<sys::CK_RV> for CryptoInitError {
                 _ => CryptoInitError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for CryptoInitError {
+    fn description(&self) -> &str {
+        use self::CryptoInitError::*;
+
+        match *self {
+            OperationActive => "operation active",
+            Key(ref err) => err.description(),
+            Mechanism(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::CryptoInitError::*;
+
+        match *self {
+            Key(ref err) => Some(err),
+            Mechanism(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for CryptoInitError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1235,6 +1836,37 @@ impl From<sys::CK_RV> for PlaintextError {
     }
 }
 
+impl error::Error for PlaintextError {
+    fn description(&self) -> &str {
+        use self::PlaintextError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            DataInvalid => "data invalid",
+            DataLenRange => "data length out of range",
+            OperationNotInitialized => "operation not initialized",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::PlaintextError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for PlaintextError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ PlaintextUpdateError ------------------------------------------
 
@@ -1272,6 +1904,36 @@ impl From<sys::CK_RV> for PlaintextUpdateError {
                 _ => PlaintextUpdateError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for PlaintextUpdateError {
+    fn description(&self) -> &str {
+        use self::PlaintextUpdateError::*;
+
+        match *self {
+            DataInvalid => "data invalid",
+            DataLenRange => "data length out of range",
+            OperationNotInitialized => "operation not initialized",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::PlaintextUpdateError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for PlaintextUpdateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1321,6 +1983,37 @@ impl From<sys::CK_RV> for CiphertextError {
     }
 }
 
+impl error::Error for CiphertextError {
+    fn description(&self) -> &str {
+        use self::CiphertextError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            EncryptedDataInvalid => "encrypted data invalid",
+            EncryptedDataLenRange => "encrypted data length out of range",
+            OperationNotInitialized => "operation not initialized",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::CiphertextError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for CiphertextError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //----------- DigestInitError ------------------------------------------------
 
@@ -1356,6 +2049,38 @@ impl From<sys::CK_RV> for DigestInitError {
     }
 }
 
+impl error::Error for DigestInitError {
+    fn description(&self) -> &str {
+        use self::DigestInitError::*;
+
+        match *self {
+            OperationActive => "operation active",
+            Mechanism(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::DigestInitError::*;
+
+        match *self {
+            Mechanism(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for DigestInitError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ DigestError ---------------------------------------------------
 
@@ -1385,6 +2110,35 @@ impl From<sys::CK_RV> for DigestError {
                 _ => DigestError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for DigestError {
+    fn description(&self) -> &str {
+        use self::DigestError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            OperationNotInitialized => "operation not initiatized",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::DigestError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for DigestError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1424,6 +2178,37 @@ impl From<sys::CK_RV> for DigestKeyError {
                 _ => DigestKeyError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for DigestKeyError {
+    fn description(&self) -> &str {
+        use self::DigestKeyError::*;
+
+        match *self {
+            KeyIndigestible => "key indigestible",
+            OperationNotInitialized => "operation not initialized",
+            Key(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::DigestKeyError::*;
+
+        match *self {
+            Key(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for DigestKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1473,6 +2258,38 @@ impl From<sys::CK_RV> for VerifyError {
                 _ => VerifyError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for VerifyError {
+    fn description(&self) -> &str {
+        use self::VerifyError::*;
+
+        match *self {
+            DataInvalid => "data invalid",
+            DataLenRange => "data length out of range",
+            OperationNotInitialized => "operation not initialized",
+            SignatureInvalid => "signature invalid",
+            SignatureLenRange => "signature length out of range",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::VerifyError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for VerifyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1531,6 +2348,39 @@ impl From<sys::CK_RV> for VerifyRecoverError {
     }
 }
 
+impl error::Error for VerifyRecoverError {
+    fn description(&self) -> &str {
+        use self::VerifyRecoverError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            DataInvalid => "data invalid",
+            DataLenRange => "data length out of range",
+            OperationNotInitialized => "operation not initialized",
+            SignatureInvalid => "signature invalid",
+            SignatureLenRange => "signature length out of range",
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::VerifyRecoverError::*;
+
+        match *self {
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for VerifyRecoverError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ CreateKeyError ---------------------------------------------
 
@@ -1561,6 +2411,38 @@ impl From<sys::CK_RV> for CreateKeyError {
         else {
             CreateKeyError::Token(TokenError::from(err))
         }
+    }
+}
+
+impl error::Error for CreateKeyError {
+    fn description(&self) -> &str {
+        use self::CreateKeyError::*;
+
+        match *self {
+            Template(ref err) => err.description(),
+            Mechanism(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::CreateKeyError::*;
+
+        match *self {
+            Template(ref err) => Some(err),
+            Mechanism(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+        }
+    }
+}
+
+impl fmt::Display for CreateKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
@@ -1621,6 +2503,45 @@ impl From<sys::CK_RV> for WrapKeyError {
     }
 }
 
+impl error::Error for WrapKeyError {
+    fn description(&self) -> &str {
+        use self::WrapKeyError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            KeyNotWrappable => "key not wrappable",
+            KeyUnextractable => "key unextractable",
+            OperationActive => "operation active",
+            Key(ref err) => err.description(),
+            WrappingKey(ref err) => err.description(),
+            Mechanism(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::WrapKeyError::*;
+
+        match *self {
+            Key(ref err) => Some(err),
+            WrappingKey(ref err) => Some(err),
+            Mechanism(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for WrapKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ UnwrapKeyError ------------------------------------------------
 
@@ -1678,6 +2599,45 @@ impl From<sys::CK_RV> for UnwrapKeyError {
     }
 }
 
+impl error::Error for UnwrapKeyError {
+    fn description(&self) -> &str {
+        use self::UnwrapKeyError::*;
+
+        match *self {
+            BufferTooSmall => "buffer too small",
+            OperationActive => "operation active",
+            WrappedKeyInvalid => "wrapped key invalid",
+            WrappedKeyLenRange => "wrapped key length out of range",
+            UnwrappingKey(ref err) => err.description(),
+            Mechanism(ref err) => err.description(),
+            Template(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::UnwrapKeyError::*;
+
+        match *self {
+            UnwrappingKey(ref err) => Some(err),
+            Mechanism(ref err) => Some(err),
+            Template(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None
+        }
+    }
+}
+
+impl fmt::Display for UnwrapKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ DeriveKeyError ------------------------------------------------
 
@@ -1721,6 +2681,42 @@ impl From<sys::CK_RV> for DeriveKeyError {
     }
 }
 
+impl error::Error for DeriveKeyError {
+    fn description(&self) -> &str {
+        use self::DeriveKeyError::*;
+
+        match *self {
+            OperationActive => "operation active",
+            Key(ref err) => err.description(),
+            Template(ref err) => err.description(),
+            Mechanism(ref err) => err.description(),
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::DeriveKeyError::*;
+
+        match *self {
+            Key(ref err) => Some(err),
+            Template(ref err) => Some(err),
+            Mechanism(ref err) => Some(err),
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for DeriveKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ SeedRandomError -----------------------------------------------
 
@@ -1755,6 +2751,38 @@ impl From<sys::CK_RV> for SeedRandomError {
     }
 }
 
+impl error::Error for SeedRandomError {
+    fn description(&self) -> &str {
+        use self::SeedRandomError::*;
+
+        match *self {
+            OperationActive => "operation active",
+            RandomSeedNotSupported => "random seed not supported",
+            RandomNoRng => "no random number generator",
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::SeedRandomError::*;
+
+        match *self {
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for SeedRandomError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
+    }
+}
+
 
 //------------ GenerateRandomError -------------------------------------------
 
@@ -1784,6 +2812,37 @@ impl From<sys::CK_RV> for GenerateRandomError {
                 _ => GenerateRandomError::Token(TokenError::from(err))
             }
         }
+    }
+}
+
+impl error::Error for GenerateRandomError {
+    fn description(&self) -> &str {
+        use self::GenerateRandomError::*;
+
+        match *self {
+            OperationActive => "operation active",
+            RandomNoRng => "no random number generator",
+            Permission(ref err) => err.description(),
+            Session(ref err) => err.description(),
+            Token(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        use self::GenerateRandomError::*;
+
+        match *self {
+            Permission(ref err) => Some(err),
+            Session(ref err) => Some(err),
+            Token(ref err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for GenerateRandomError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(error::Error::description(self))
     }
 }
 
