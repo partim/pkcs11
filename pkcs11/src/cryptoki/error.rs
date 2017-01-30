@@ -584,6 +584,12 @@ impl From<sys::CK_RV> for TokenError {
     }
 }
 
+impl From<TokenError> for io::Error {
+    fn from(err: TokenError) -> Self {
+        io::Error::new(io::ErrorKind::Other, format!("{}", err))
+    }
+}
+
 impl error::Error for TokenError {
     fn description(&self) -> &str {
         use self::TokenError::*;
@@ -635,6 +641,15 @@ impl From<TokenError> for LoadError {
 impl From<io::Error> for LoadError {
     fn from(err: io::Error) -> Self {
         LoadError::Io(err)
+    }
+}
+
+impl From<LoadError> for io::Error {
+    fn from(err: LoadError) -> Self {
+        match err {
+            LoadError::Token(err) => err.into(),
+            LoadError::Io(err) => err,
+        }
     }
 }
 
