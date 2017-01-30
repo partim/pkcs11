@@ -1975,7 +1975,7 @@ pkcs11_functions!{
     CK_PKCS11_FUNCTION_INFO(C_InitToken, CK_C_InitToken)(
         slotID: CK_SLOT_ID,
         pPin: *const CK_UTF8CHAR,
-        ulPinLin: CK_ULONG,
+        ulPinLen: CK_ULONG,
         pLabel: *const CK_UTF8CHAR
     );
 
