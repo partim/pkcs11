@@ -718,7 +718,7 @@ impl From<usize> for Size {
 
 //------------ SlotId --------------------------------------------------------
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct SlotId(sys::CK_SLOT_ID);
 
 impl From<sys::CK_SLOT_ID> for SlotId {
