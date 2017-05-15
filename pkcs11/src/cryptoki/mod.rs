@@ -77,19 +77,29 @@ impl Cryptoki {
     ///
     /// If `token_present` is `true`, only the IDs of slots that currently
     /// have a token present are returned.
-    pub fn get_slot_list(&self, token_present: bool)
-                         -> Result<Vec<SlotId>, TokenError> {
+    pub fn get_slot_list(&self, token_present: bool,
+                         list: Option<&mut [SlotId]>)
+                         -> Result<usize, TokenError> {
         let token_present = if token_present { sys::CK_TRUE }
                             else { sys::CK_FALSE };
         Ok(unsafe {
-            let mut len = 0;
-            call_ck!(self.C_GetSlotList(token_present, ptr::null_mut(),
-                                        &mut len));
-            let mut res = vec![0; from_ck_long(len)];
-            call_ck!(self.C_GetSlotList(token_present, res.as_mut_ptr(),
-                                        &mut len));
-            res.truncate(from_ck_long(len));
-            mem::transmute(res)
+            match list {
+                Some(list) => {
+                    let mut len = to_ck_long(list.len());
+                    let list_ptr = list.as_mut_ptr();
+                    call_ck!(self.C_GetSlotList(token_present,
+                                                mem::transmute(list_ptr),
+                                                &mut len));
+                    from_ck_long(len)
+                }
+                None => {
+                    let mut len = 0;
+                    call_ck!(self.C_GetSlotList(token_present,
+                                                ptr::null_mut(),
+                                                &mut len));
+                    from_ck_long(len)
+                }
+            }
         })
     }
 
