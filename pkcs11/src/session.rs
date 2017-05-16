@@ -1,5 +1,5 @@
 
-use ::cryptoki::{Cryptoki, SessionFlags, SessionInfo, SlotId, UserType};
+use ::ck::{Cryptoki, SessionFlags, SessionInfo, SlotId, UserType};
 use ::error::*;
 use super::core::Core;
 

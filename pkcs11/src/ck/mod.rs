@@ -38,7 +38,7 @@ pub struct Cryptoki {
 
 impl Cryptoki {
     pub fn new(lib: Library, args: Option<sys::CK_C_INITIALIZE_ARGS>)
-               -> Result<Self, CkError> {
+               -> Result<Self, Error> {
         CryptokiOnce::new(lib, args).map(|ck| Cryptoki{inner: Arc::new(ck)})
     }
 
@@ -66,7 +66,7 @@ macro_rules! call_ck {
 
 impl Cryptoki {
     /// Obtains general information about Cryptoki.
-    pub fn get_info(&self, info: &mut Info) -> Result<(), CkError> {
+    pub fn get_info(&self, info: &mut Info) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_GetInfo(info.as_mut()));
         })
@@ -78,7 +78,7 @@ impl Cryptoki {
     /// have a token present are returned.
     pub fn get_slot_list(&self, token_present: bool,
                          list: Option<&mut [SlotId]>)
-                         -> Result<usize, CkError> {
+                         -> Result<usize, Error> {
         let token_present = if token_present { sys::CK_TRUE }
                             else { sys::CK_FALSE };
         Ok(unsafe {
@@ -104,7 +104,7 @@ impl Cryptoki {
 
     /// Obtains information about a particular slot in the system.
     pub fn get_slot_info(&self, slot_id: SlotId, info: &mut SlotInfo)
-                       -> Result<(), CkError> {
+                       -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_GetSlotInfo(slot_id.into(), info.as_mut()));
         })
@@ -112,7 +112,7 @@ impl Cryptoki {
 
     /// Obtains information about a particular token in the system.
     pub fn get_token_info(&self, slot_id: SlotId, info: &mut TokenInfo)
-                        -> Result<(), CkError> {
+                        -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_GetTokenInfo(slot_id.into(), info.as_mut()));
         })
@@ -120,7 +120,7 @@ impl Cryptoki {
 
     /// Returns a list of the mechanism types supported by a token.
     pub fn get_mechanism_list<T>(&self, slot_id: SlotId)
-                                 -> Result<T, CkError> 
+                                 -> Result<T, Error> 
                               where T: iter::FromIterator<MechanismType> {
         let vec = unsafe {
             let mut len = 0;
@@ -139,7 +139,7 @@ impl Cryptoki {
     pub fn get_mechanism_info(&self, slot_id: SlotId,
                               mechanism: MechanismType,
                               info: &mut MechanismInfo)
-                              -> Result<(), CkError> {
+                              -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_GetMechanismInfo(slot_id.into(), mechanism.into(),
                                              info.as_mut()));
@@ -148,7 +148,7 @@ impl Cryptoki {
 
     /// Initializes a token.
     pub fn init_token(&self, slot_id: SlotId, pin: Option<&str>,
-                    label: &str) -> Result<(), CkError> {
+                    label: &str) -> Result<(), Error> {
         assert_eq!(label.as_bytes().len(), 32);
         let (ptr, len) = translate_pin(pin);
         Ok(unsafe {
@@ -159,7 +159,7 @@ impl Cryptoki {
 
     /// Initializes the normal user’s PIN.
     pub fn init_pin(&self, session: SessionHandle, pin: Option<&str>)
-                  -> Result<(), CkError> {
+                  -> Result<(), Error> {
         let (ptr, len) = translate_pin(pin);
         Ok(unsafe {
             call_ck!(self.C_InitPIN(session.into(), ptr, len))
@@ -168,7 +168,7 @@ impl Cryptoki {
 
     /// Modifies the PIN of the user currently logged in.
     pub fn set_pin(&self, session: SessionHandle, old_pin: Option<&str>,
-                   new_pin: Option<&str>) -> Result<(), CkError> {
+                   new_pin: Option<&str>) -> Result<(), Error> {
         let (oldptr, oldlen) = translate_pin(old_pin);
         let (newptr, newlen) = translate_pin(new_pin);
         Ok(unsafe {
@@ -179,7 +179,7 @@ impl Cryptoki {
 
     /// Opens a sessions between the application and a particular token.
     pub fn open_session(&self, slot_id: SlotId, flags: SessionFlags)
-                        -> Result<SessionHandle, CkError> {
+                        -> Result<SessionHandle, Error> {
         // CKF_SERIAL_SESSION must always be set. Let’s do that here, then.
         let flags = flags | SessionFlags::serial_session();
         Ok(unsafe {
@@ -192,20 +192,20 @@ impl Cryptoki {
 
     /// Closes a session between an application and a token.
     pub fn close_session(&self, session: SessionHandle)
-                         -> Result<(), CkError> {
+                         -> Result<(), Error> {
         Ok(unsafe { call_ck!(self.C_CloseSession(session.into())) })
     }
 
     /// Closes sessions an application has with a token in the given slot.
     pub fn close_all_sessions(&self, slot_id: SlotId)
-                              -> Result<(), CkError> {
+                              -> Result<(), Error> {
         Ok(unsafe { call_ck!(self.C_CloseAllSessions(slot_id.into())) })
     }
 
     /// Obtains information about a session.
     pub fn get_session_info(&self, session: SessionHandle,
                             info: &mut SessionInfo)
-                            -> Result<(), CkError> {
+                            -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_GetSessionInfo(session.into(), info.as_mut()));
         })
@@ -214,7 +214,7 @@ impl Cryptoki {
     /// Obtains a copy of the operational state of the session.
     pub fn get_operation_state(&self, session: SessionHandle,
                                state: Option<&mut [u8]>)
-                               -> Result<usize, CkError> {
+                               -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&state);
             call_ck!(self.C_GetOperationState(session.into(),
@@ -228,7 +228,7 @@ impl Cryptoki {
                                operation_state: &[u8],
                                encryption_key: Option<ObjectHandle>,
                                authentication_key: Option<ObjectHandle>)
-                               -> Result<(), CkError> {
+                               -> Result<(), Error> {
         let encryption_key = match encryption_key {
             Some(key) => key.into(),
             None => 0
@@ -247,7 +247,7 @@ impl Cryptoki {
 
     /// Logs a user into a token.
     pub fn login(&self, session: SessionHandle, user_type: UserType,
-                 pin: Option<&str>) -> Result<(), CkError> {
+                 pin: Option<&str>) -> Result<(), Error> {
         let (ptr, len) = match pin {
             Some(pin) => (pin.as_ptr(), ck_len(pin)),
             None => (ptr::null(), 0)
@@ -258,13 +258,13 @@ impl Cryptoki {
     }
 
     /// Logs a user out from a token.
-    pub fn logout(&self, session: SessionHandle) -> Result<(), CkError> {
+    pub fn logout(&self, session: SessionHandle) -> Result<(), Error> {
         Ok(unsafe { call_ck!(self.C_Logout(session.into())) })
     }
 
     /// Creates a new object.
     pub fn create_object<'a, T>(&self, session: SessionHandle, template: T)
-                                -> Result<ObjectHandle, CkError>
+                                -> Result<ObjectHandle, Error>
                          where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
@@ -277,7 +277,7 @@ impl Cryptoki {
     /// Copies an object.
     pub fn copy_object<'a, T>(&self, session: SessionHandle,
                               object: ObjectHandle, template: T)
-                              -> Result<ObjectHandle, CkError> 
+                              -> Result<ObjectHandle, Error> 
                        where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
@@ -290,7 +290,7 @@ impl Cryptoki {
 
     /// Destroys an object.
     pub fn destroy_object(&self, session: SessionHandle, object: ObjectHandle)
-                          -> Result<(), CkError> {
+                          -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_DestroyObject(session.into(), object.into()))
         })
@@ -298,7 +298,7 @@ impl Cryptoki {
 
     pub fn get_object_size(&self, session: SessionHandle,
                            object: ObjectHandle)
-                           -> Result<usize, CkError> {
+                           -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = 0;
             call_ck!(self.C_GetObjectSize(session.into(), object.into(),
@@ -309,7 +309,7 @@ impl Cryptoki {
 
     pub fn get_attribute_value<'a, T>(&self, session: SessionHandle,
                                       object: ObjectHandle, mut template: T)
-                                      -> Result<(), CkError>
+                                      -> Result<(), Error>
                                where T: AsMut<[Attribute<'a>]> {
         Ok(unsafe {
             let template: &mut [sys::CK_ATTRIBUTE]
@@ -322,7 +322,7 @@ impl Cryptoki {
 
     pub fn set_attribute_value<'a, T>(&self, session: SessionHandle,
                                       object: ObjectHandle, template: T)
-                                      -> Result<(), CkError>
+                                      -> Result<(), Error>
                                where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let (ptr, len) = translate_template(template);
@@ -333,7 +333,7 @@ impl Cryptoki {
 
     pub fn find_objects_init<'a, T>(&self, session: SessionHandle,
                                     template: T)
-                                    -> Result<(), CkError>
+                                    -> Result<(), Error>
                              where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let (ptr, len) = translate_template(template);
@@ -343,7 +343,7 @@ impl Cryptoki {
 
     pub fn find_objects(&self, session: SessionHandle,
                         buf: &mut [ObjectHandle])
-                        -> Result<usize, CkError> {
+                        -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = 0;
             let mut buf: &mut [sys::CK_OBJECT_HANDLE] = mem::transmute(buf);
@@ -354,7 +354,7 @@ impl Cryptoki {
     }
 
     pub fn find_objects_final(&self, session: SessionHandle)
-                              -> Result<(), CkError> {
+                              -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_FindObjectsFinal(session.into()))
         })
@@ -363,7 +363,7 @@ impl Cryptoki {
     pub fn encrypt_init<P>(&self, session: SessionHandle,
                            mechanism: MechanismType, param: &P,
                            key: ObjectHandle)
-                           -> Result<(), CkError> {
+                           -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_EncryptInit(session.into(),
                                         &init_mechanism(mechanism, param),
@@ -373,7 +373,7 @@ impl Cryptoki {
 
     pub fn encrypt(&self, session: SessionHandle,
                    data: &[u8], encrypted_data: Option<&mut [u8]>)
-                   -> Result<usize, CkError> {
+                   -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&encrypted_data);
             call_ck!(self.C_Encrypt(session.into(), data.as_ptr(), ck_len(data),
@@ -384,7 +384,7 @@ impl Cryptoki {
 
     pub fn encrypt_update(&self, session: SessionHandle,
                           part: &[u8], encrypted_part: Option<&mut [u8]>)
-                          -> Result<usize, CkError> {
+                          -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&encrypted_part);
             call_ck!(self.C_EncryptUpdate(session.into(), part.as_ptr(),
@@ -397,7 +397,7 @@ impl Cryptoki {
 
     pub fn encrypt_final(&self, session: SessionHandle,
                          last_encrypted_part: Option<&mut [u8]>)
-                         -> Result<usize, CkError> {
+                         -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&last_encrypted_part);
             call_ck!(self.C_EncryptFinal(session.into(),
@@ -409,7 +409,7 @@ impl Cryptoki {
 
     pub fn decrypt_init<P>(&self, session: SessionHandle,
                         mechanism: MechanismType, param: &P,
-                        key: ObjectHandle) -> Result<(), CkError> {
+                        key: ObjectHandle) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_DecryptInit(session.into(),
                                         &init_mechanism(mechanism, param),
@@ -419,7 +419,7 @@ impl Cryptoki {
 
     pub fn decrypt(&self, session: SessionHandle,
                    encrypted_data: &[u8], data: Option<&mut [u8]>)
-                   -> Result<usize, CkError> {
+                   -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&data);
             call_ck!(self.C_Decrypt(session.into(), encrypted_data.as_ptr(),
@@ -431,7 +431,7 @@ impl Cryptoki {
 
     pub fn decrypt_update(&self, session: SessionHandle,
                           encrypted_part: &[u8], part: Option<&mut [u8]>)
-                          -> Result<usize, CkError> {
+                          -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&part);
             call_ck!(self.C_DecryptUpdate(session.into(),
@@ -444,7 +444,7 @@ impl Cryptoki {
 
     pub fn decrypt_final(&self, session: SessionHandle,
                          last_part: Option<&mut [u8]>)
-                         -> Result<usize, CkError> {
+                         -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&last_part);
             call_ck!(self.C_DecryptFinal(session.into(),
@@ -456,7 +456,7 @@ impl Cryptoki {
 
     pub fn digest_init<P>(&self, session: SessionHandle,
                        mechanism: MechanismType, param: &P)
-                       -> Result<(), CkError> {
+                       -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_DigestInit(session.into(),
                                        &init_mechanism(mechanism, param)))
@@ -465,7 +465,7 @@ impl Cryptoki {
 
     pub fn digest(&self, session: SessionHandle,
                   data: &[u8], digest: Option<&mut [u8]>)
-                  -> Result<usize, CkError> {
+                  -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&digest);
             call_ck!(self.C_Digest(session.into(), data.as_ptr(), ck_len(data),
@@ -475,7 +475,7 @@ impl Cryptoki {
     }
 
     pub fn digest_update(&self, session: SessionHandle,
-                         part: &[u8]) -> Result<(), CkError> {
+                         part: &[u8]) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_DigestUpdate(session.into(), part.as_ptr(),
                                          ck_len(part)))
@@ -483,13 +483,13 @@ impl Cryptoki {
     }
 
     pub fn digest_key(&self, session: SessionHandle,
-                      key: ObjectHandle) -> Result<(), CkError> {
+                      key: ObjectHandle) -> Result<(), Error> {
         Ok(unsafe { call_ck!(self.C_DigestKey(session.into(), key.into())) })
     }
 
     pub fn digest_final(&self, session: SessionHandle,
                         digest: Option<&mut [u8]>)
-                        -> Result<usize, CkError> {
+                        -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&digest);
             call_ck!(self.C_DigestFinal(session.into(), opt_mut_ptr(digest),
@@ -500,7 +500,7 @@ impl Cryptoki {
 
     pub fn sign_init<P>(&self, session: SessionHandle,
                         mechanism: MechanismType, param: &P,
-                        key: ObjectHandle) -> Result<(), CkError> {
+                        key: ObjectHandle) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_SignInit(session.into(),
                                      &init_mechanism(mechanism, param),
@@ -510,7 +510,7 @@ impl Cryptoki {
 
     pub fn sign(&self, session: SessionHandle,
                 data: &[u8], signature: Option<&mut [u8]>)
-                -> Result<usize, CkError> {
+                -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&signature);
             call_ck!(self.C_Sign(session.into(), data.as_ptr(), ck_len(data),
@@ -520,7 +520,7 @@ impl Cryptoki {
     }
 
     pub fn sign_update(&self, session: SessionHandle,
-                       part: &[u8]) -> Result<(), CkError> {
+                       part: &[u8]) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_SignUpdate(session.into(), part.as_ptr(),
                                        ck_len(part)));
@@ -529,7 +529,7 @@ impl Cryptoki {
 
     pub fn sign_final(&self, session: SessionHandle,
                       signature: Option<&mut [u8]>)
-                      -> Result<usize, CkError> {
+                      -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&signature);
             call_ck!(self.C_SignFinal(session.into(), opt_mut_ptr(signature),
@@ -541,7 +541,7 @@ impl Cryptoki {
     pub fn sign_recover_init<P>(&self, session: SessionHandle,
                                 mechanism: MechanismType, param: &P,
                                 key: ObjectHandle)
-                                -> Result<(), CkError> {
+                                -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_SignRecoverInit(session.into(),
                                             &init_mechanism(mechanism, param),
@@ -551,7 +551,7 @@ impl Cryptoki {
 
     pub fn sign_recover(&self, session: SessionHandle,
                         data: &[u8], signature: Option<&mut [u8]>)
-                        -> Result<usize, CkError> {
+                        -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&signature);
             call_ck!(self.C_SignRecover(session.into(), data.as_ptr(),
@@ -563,7 +563,7 @@ impl Cryptoki {
 
     pub fn verify_init<P>(&self, session: SessionHandle,
                           mechanism: MechanismType, param: &P,
-                          key: ObjectHandle) -> Result<(), CkError> {
+                          key: ObjectHandle) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_VerifyInit(session.into(),
                                        &init_mechanism(mechanism, param),
@@ -572,7 +572,7 @@ impl Cryptoki {
     }
 
     pub fn verify(&self, session: SessionHandle,
-                  data: &[u8], signature: &[u8]) -> Result<(), CkError> {
+                  data: &[u8], signature: &[u8]) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_Verify(session.into(), data.as_ptr(), ck_len(data),
                                    signature.as_ptr(), ck_len(signature)))
@@ -580,7 +580,7 @@ impl Cryptoki {
     }
                                         
     pub fn verify_update(&self, session: SessionHandle,
-                         data: &[u8]) -> Result<(), CkError> {
+                         data: &[u8]) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_VerifyUpdate(session.into(), data.as_ptr(),
                                          ck_len(data)))
@@ -588,7 +588,7 @@ impl Cryptoki {
     }
 
     pub fn verify_final(&self, session: SessionHandle,
-                        signature: &[u8]) -> Result<(), CkError> {
+                        signature: &[u8]) -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_VerifyFinal(session.into(), signature.as_ptr(),
                                         ck_len(signature)))
@@ -598,7 +598,7 @@ impl Cryptoki {
     pub fn verify_recover_init<P>(&self, session: SessionHandle,
                                   mechanism: MechanismType, param: &P,
                                   key: ObjectHandle)
-                                  -> Result<(), CkError> {
+                                  -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_VerifyRecoverInit(session.into(),
                                               &init_mechanism(mechanism,
@@ -609,7 +609,7 @@ impl Cryptoki {
 
     pub fn verify_recover(&self, session: SessionHandle,
                           signature: &[u8], data: Option<&mut [u8]>)
-                          -> Result<usize, CkError> {
+                          -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&data);
             call_ck!(self.C_VerifyRecover(session.into(), signature.as_ptr(),
@@ -622,7 +622,7 @@ impl Cryptoki {
     pub fn digest_encrypt_update(&self, session: SessionHandle,
                                  part: &[u8],
                                  encrypted_part: Option<&mut [u8]>)
-                                 -> Result<usize, CkError> {
+                                 -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&encrypted_part);
             call_ck!(self.C_DigestEncryptUpdate(session.into(), part.as_ptr(),
@@ -636,7 +636,7 @@ impl Cryptoki {
     pub fn decrypt_digest_update(&self, session: SessionHandle,
                                  encrypted_part: &[u8],
                                  part: Option<&mut [u8]>)
-                                 -> Result<usize, CkError> {
+                                 -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&part);
             call_ck!(self.C_DecryptDigestUpdate(session.into(),
@@ -650,7 +650,7 @@ impl Cryptoki {
     pub fn sign_encrypt_update(&self, session: SessionHandle,
                                part: &[u8],
                                encrypted_part: Option<&mut [u8]>)
-                               -> Result<usize, CkError> {
+                               -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&encrypted_part);
             call_ck!(self.C_SignEncryptUpdate(session.into(), part.as_ptr(),
@@ -664,7 +664,7 @@ impl Cryptoki {
     pub fn decrypt_verify_update(&self, session: SessionHandle,
                                  encrypted_part: &[u8],
                                  part: Option<&mut [u8]>)
-                                 -> Result<usize, CkError> {
+                                 -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&part);
             call_ck!(self.C_DecryptVerifyUpdate(session.into(),
@@ -678,7 +678,7 @@ impl Cryptoki {
     pub fn generate_key<'a, P, T>(&self, session: SessionHandle,
                                mechanism: MechanismType, param: &P,
                                template: T)
-                               -> Result<ObjectHandle, CkError>
+                               -> Result<ObjectHandle, Error>
                         where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
@@ -698,7 +698,7 @@ impl Cryptoki {
                                        private_key_template: U)
                                        -> Result<(ObjectHandle,
                                                   ObjectHandle),
-                                                 CkError>
+                                                 Error>
                              where T: AsRef<[Attribute<'a>]>,
                                    U: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
@@ -718,7 +718,7 @@ impl Cryptoki {
                     wrapping_key: ObjectHandle,
                     key: ObjectHandle,
                     wrapped_key: Option<&mut [u8]>)
-                    -> Result<usize, CkError> {
+                    -> Result<usize, Error> {
         Ok(unsafe {
             let mut res = opt_len(&wrapped_key);
             call_ck!(self.C_WrapKey(session.into(), mechanism,
@@ -732,7 +732,7 @@ impl Cryptoki {
                              mechanism: &sys::CK_MECHANISM,
                              unwrapping_key: ObjectHandle,
                              wrapped_key: &[u8], template: T)
-                             -> Result<ObjectHandle, CkError>
+                             -> Result<ObjectHandle, Error>
                       where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
@@ -749,7 +749,7 @@ impl Cryptoki {
     pub fn derive_key<'a, T>(&self, session: SessionHandle,
                              mechanism: &sys::CK_MECHANISM,
                              base_key: ObjectHandle, template: T)
-                             -> Result<ObjectHandle, CkError>
+                             -> Result<ObjectHandle, Error>
                       where T: AsRef<[Attribute<'a>]> {
         Ok(unsafe {
             let mut res = 0;
@@ -762,7 +762,7 @@ impl Cryptoki {
     }
 
     pub fn seed_random(&self, session: SessionHandle, seed: &[u8])
-                       -> Result<(), CkError> {
+                       -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_SeedRandom(session.into(), seed.as_ptr(),
                                        ck_len(seed)))
@@ -771,7 +771,7 @@ impl Cryptoki {
 
     pub fn generate_random(&self, session: SessionHandle,
                            random_data: &mut [u8])
-                           -> Result<(), CkError> {
+                           -> Result<(), Error> {
         Ok(unsafe {
             call_ck!(self.C_GenerateRandom(session.into(),
                                            random_data.as_mut_ptr(),

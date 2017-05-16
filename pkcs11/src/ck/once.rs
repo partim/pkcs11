@@ -2,7 +2,7 @@
 use std::{mem, ptr};
 use libloading::{Library, Symbol};
 use pkcs11_sys as sys;
-use super::CkError;
+use super::Error;
 
 
 //------------ CryptokiOnce --------------------------------------------------
@@ -23,7 +23,7 @@ pub struct CryptokiOnce {
 
 impl CryptokiOnce {
     pub fn new(lib: Library, args: Option<sys::CK_C_INITIALIZE_ARGS>)
-            -> Result<Self, CkError> {
+               -> Result<Self, Error> {
         let ck = unsafe {
             let get_list: Symbol<sys::CK_C_GetFunctionList> =
                                         match lib.get(b"C_GetFunctionList") {

@@ -1,7 +1,7 @@
 //! Private core types.
 
-use ::cryptoki::{Cryptoki, SessionFlags, SessionHandle, SessionInfo, SlotId,
-                 UserType};
+use ::ck::{Cryptoki, SessionFlags, SessionHandle, SessionInfo, SlotId,
+           UserType};
 use ::error::*;
 
 //------------ Core ---------------------------------------------------------

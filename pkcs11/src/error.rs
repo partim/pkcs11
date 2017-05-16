@@ -1,7 +1,7 @@
 //! Error handling.
 
 use std::{error, fmt, io};
-use ::cryptoki::error::*;
+use ::ck;
 
 
 
@@ -26,34 +26,34 @@ pub enum KeyError {
 }
 
 impl KeyError {
-    pub fn from_ck(err: CkError) -> Option<Self> {
+    pub fn from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_KEY_HANDLE_INVALID => Some(KeyError::KeyHandleInvalid),
-            CKR_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
-            CKR_KEY_TYPE_INCONSISTENT
+            ck::R_KEY_HANDLE_INVALID => Some(KeyError::KeyHandleInvalid),
+            ck::R_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
+            ck::R_KEY_TYPE_INCONSISTENT
                 => Some(KeyError::KeyTypeInconsistent),
             _ => None
         }
     }
 
-    pub fn wrapping_from_ck(err: CkError) -> Option<Self> {
+    pub fn wrapping_from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_WRAPPING_KEY_HANDLE_INVALID
+            ck::R_WRAPPING_KEY_HANDLE_INVALID
                 => Some(KeyError::KeyHandleInvalid),
-            CKR_WRAPPING_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
-            CKR_WRAPPING_KEY_TYPE_INCONSISTENT
+            ck::R_WRAPPING_KEY_SIZE_RANGE => Some(KeyError::KeySizeRange),
+            ck::R_WRAPPING_KEY_TYPE_INCONSISTENT
                 => Some(KeyError::KeyTypeInconsistent),
             _ => None
         }
     }
 
-    pub fn unwrapping_from_ck(err: CkError) -> Option<Self> {
+    pub fn unwrapping_from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_UNWRAPPING_KEY_HANDLE_INVALID
+            ck::R_UNWRAPPING_KEY_HANDLE_INVALID
                 => Some(KeyError::KeyHandleInvalid),
-            CKR_UNWRAPPING_KEY_SIZE_RANGE
+            ck::R_UNWRAPPING_KEY_SIZE_RANGE
                 => Some(KeyError::KeySizeRange),
-            CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT
+            ck::R_UNWRAPPING_KEY_TYPE_INCONSISTENT
                 => Some(KeyError::KeyTypeInconsistent),
             _ => None
         }
@@ -93,11 +93,11 @@ pub enum MechanismError {
 }
 
 impl MechanismError {
-    pub fn from_ck(err: CkError) -> Option<Self> {
+    pub fn from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_MECHANISM_INVALID
+            ck::R_MECHANISM_INVALID
                 => Some(MechanismError::MechanismInvalid),
-            CKR_MECHANISM_PARAM_INVALID
+            ck::R_MECHANISM_PARAM_INVALID
                 => Some(MechanismError::MechanismParamInvalid),
             _ => None
         }
@@ -157,16 +157,16 @@ pub enum PermissionError {
 }
 
 impl PermissionError {
-    pub fn from_ck(err: CkError) -> Option<Self> {
+    pub fn from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_ACTION_PROHIBITED => Some(PermissionError::ActionProhibited),
-            CKR_INFORMATION_SENSITIVE
+            ck::R_ACTION_PROHIBITED => Some(PermissionError::ActionProhibited),
+            ck::R_INFORMATION_SENSITIVE
                 => Some(PermissionError::InformationSensitive),
-            CKR_PIN_EXPIRED => Some(PermissionError::PinExpired),
-            CKR_SESSION_READ_ONLY => Some(PermissionError::SessionReadOnly),
-            CKR_TOKEN_WRITE_PROTECTED
+            ck::R_PIN_EXPIRED => Some(PermissionError::PinExpired),
+            ck::R_SESSION_READ_ONLY => Some(PermissionError::SessionReadOnly),
+            ck::R_TOKEN_WRITE_PROTECTED
                 => Some(PermissionError::TokenWriteProtected),
-            CKR_USER_NOT_LOGGED_IN => Some(PermissionError::UserNotLoggedIn),
+            ck::R_USER_NOT_LOGGED_IN => Some(PermissionError::UserNotLoggedIn),
             _ => None,
         }
     }
@@ -213,11 +213,11 @@ pub enum SessionError {
 }
 
 impl SessionError {
-    pub fn from_ck(err: CkError) -> Option<Self> {
+    pub fn from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_SESSION_HANDLE_INVALID
+            ck::R_SESSION_HANDLE_INVALID
                 => Some(SessionError::SessionHandleInvalid),
-            CKR_SESSION_CLOSED => Some(SessionError::SessionClosed),
+            ck::R_SESSION_CLOSED => Some(SessionError::SessionClosed),
             _ => None
         }
     }
@@ -269,19 +269,19 @@ pub enum TemplateError {
 }
 
 impl TemplateError {
-    pub fn from_ck(err: CkError) -> Option<Self> {
+    pub fn from_ck(err: ck::Error) -> Option<Self> {
         match err {
-            CKR_ATTRIBUTE_READ_ONLY => Some(TemplateError::AttributeReadOnly),
-            CKR_ATTRIBUTE_TYPE_INVALID
+            ck::R_ATTRIBUTE_READ_ONLY => Some(TemplateError::AttributeReadOnly),
+            ck::R_ATTRIBUTE_TYPE_INVALID
                 => Some(TemplateError::AttributeTypeInvalid),
-            CKR_ATTRIBUTE_VALUE_INVALID
+            ck::R_ATTRIBUTE_VALUE_INVALID
                 => Some(TemplateError::AttributeValueInvalid),
-            CKR_CURVE_NOT_SUPPORTED => Some(TemplateError::CurveNotSupported),
-            CKR_DOMAIN_PARAMS_INVALID
+            ck::R_CURVE_NOT_SUPPORTED => Some(TemplateError::CurveNotSupported),
+            ck::R_DOMAIN_PARAMS_INVALID
                 => Some(TemplateError::DomainParamsInvalid),
-            CKR_TEMPLATE_INCOMPLETE
+            ck::R_TEMPLATE_INCOMPLETE
                 => Some(TemplateError::TemplateIncomplete),
-            CKR_TEMPLATE_INCONSISTENT
+            ck::R_TEMPLATE_INCONSISTENT
                 => Some(TemplateError::TemplateInconsistent),
             _ => None
         }
@@ -352,7 +352,7 @@ pub enum TokenError {
 
     // Further errors specified to happen for functions that we can put here:
     //
-    // CKR_FUNCTION_CANCELED
+    // ck::R_FUNCTION_CANCELED
 
     /// The library or slot does not recognize the token in the slot.
     TokenNotRecognized,
@@ -363,20 +363,20 @@ pub enum TokenError {
     /// that wasn’t allowed for this function by the standard. As this
     /// means that the state of library and token isn’t well defined anymore,
     /// it might be advisable to give up.
-    Other(CkError),
+    Other(ck::Error),
 }
 
-impl From<CkError> for TokenError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for TokenError {
+    fn from(err: ck::Error) -> Self {
         match err {
-            CKR_DEVICE_ERROR => TokenError::DeviceError,
-            CKR_DEVICE_MEMORY => TokenError::DeviceMemory,
-            CKR_DEVICE_REMOVED => TokenError::DeviceRemoved,
-            CKR_FUNCTION_FAILED => TokenError::FunctionFailed,
-            CKR_GENERAL_ERROR => TokenError::GeneralError,
-            CKR_HOST_MEMORY => TokenError::HostMemory,
-            CKR_TOKEN_NOT_PRESENT => TokenError::TokenNotPresent,
-            CKR_TOKEN_NOT_RECOGNIZED => TokenError::TokenNotRecognized,
+            ck::R_DEVICE_ERROR => TokenError::DeviceError,
+            ck::R_DEVICE_MEMORY => TokenError::DeviceMemory,
+            ck::R_DEVICE_REMOVED => TokenError::DeviceRemoved,
+            ck::R_FUNCTION_FAILED => TokenError::FunctionFailed,
+            ck::R_GENERAL_ERROR => TokenError::GeneralError,
+            ck::R_HOST_MEMORY => TokenError::HostMemory,
+            ck::R_TOKEN_NOT_PRESENT => TokenError::TokenNotPresent,
+            ck::R_TOKEN_NOT_RECOGNIZED => TokenError::TokenNotRecognized,
             _ => TokenError::Other(err)
         }
     }
@@ -486,10 +486,10 @@ pub enum SlotAccessError {
     Token(TokenError)
 }
 
-impl From<CkError> for SlotAccessError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for SlotAccessError {
+    fn from(err: ck::Error) -> Self {
         match err {
-            CKR_SLOT_ID_INVALID => SlotAccessError::SlotIdInvalid,
+            ck::R_SLOT_ID_INVALID => SlotAccessError::SlotIdInvalid,
             _ => SlotAccessError::Token(err.into())
         }
     }
@@ -535,12 +535,12 @@ pub enum GetMechanismInfoError {
     Token(TokenError)
 }
 
-impl From<CkError> for GetMechanismInfoError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for GetMechanismInfoError {
+    fn from(err: ck::Error) -> Self {
         match err {
-            CKR_MECHANISM_INVALID
+            ck::R_MECHANISM_INVALID
                 => GetMechanismInfoError::InvalidMechanism,
-            CKR_SLOT_ID_INVALID => GetMechanismInfoError::SlotIdInvalid,
+            ck::R_SLOT_ID_INVALID => GetMechanismInfoError::SlotIdInvalid,
             _ => GetMechanismInfoError::Token(err.into())
         }
     }
@@ -599,14 +599,14 @@ pub enum InitTokenError {
     Token(TokenError)
 }
 
-impl From<CkError> for InitTokenError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for InitTokenError {
+    fn from(err: ck::Error) -> Self {
         match err {
-            CKR_PIN_INCORRECT => InitTokenError::PinIncorrect,
-            CKR_PIN_LOCKED => InitTokenError::PinLocked,
-            CKR_SESSION_EXISTS => InitTokenError::SessionExists,
-            CKR_SLOT_ID_INVALID => InitTokenError::SlotIdInvalid,
-            CKR_TOKEN_WRITE_PROTECTED
+            ck::R_PIN_INCORRECT => InitTokenError::PinIncorrect,
+            ck::R_PIN_LOCKED => InitTokenError::PinLocked,
+            ck::R_SESSION_EXISTS => InitTokenError::SessionExists,
+            ck::R_SLOT_ID_INVALID => InitTokenError::SlotIdInvalid,
+            ck::R_TOKEN_WRITE_PROTECTED
                 => InitTokenError::TokenWriteProtected,
             _ => InitTokenError::Token(err.into())
         }
@@ -670,8 +670,8 @@ pub enum SetPinError {
     Token(TokenError)
 }
 
-impl From<CkError> for SetPinError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for SetPinError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = PermissionError::from_ck(err) {
             SetPinError::Permission(err)
         }
@@ -680,10 +680,10 @@ impl From<CkError> for SetPinError {
         }
         else {
             match err {
-                CKR_PIN_INVALID => SetPinError::PinInvalid,
-                CKR_PIN_INCORRECT => SetPinError::PinIncorrect,
-                CKR_PIN_LEN_RANGE => SetPinError::PinLenRange,
-                CKR_PIN_LOCKED => SetPinError::PinLocked,
+                ck::R_PIN_INVALID => SetPinError::PinInvalid,
+                ck::R_PIN_INCORRECT => SetPinError::PinIncorrect,
+                ck::R_PIN_LEN_RANGE => SetPinError::PinLenRange,
+                ck::R_PIN_LOCKED => SetPinError::PinLocked,
                 _ => SetPinError::Token(TokenError::from(err))
             }
         }
@@ -747,17 +747,17 @@ pub enum OpenSessionError {
     Token(TokenError)
 }
 
-impl From<CkError> for OpenSessionError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for OpenSessionError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = PermissionError::from_ck(err) {
             OpenSessionError::Permission(err)
         }
         else {
             match err {
-                CKR_SESSION_COUNT => OpenSessionError::SessionCount,
-                CKR_SESSION_READ_WRITE_SO_EXISTS
+                ck::R_SESSION_COUNT => OpenSessionError::SessionCount,
+                ck::R_SESSION_READ_WRITE_SO_EXISTS
                     => OpenSessionError::SessionReadWriteSoExists,
-                CKR_SLOT_ID_INVALID => OpenSessionError::SlotIdInvalid,
+                ck::R_SLOT_ID_INVALID => OpenSessionError::SlotIdInvalid,
                 _ => OpenSessionError::Token(TokenError::from(err))
             }
         }
@@ -807,8 +807,8 @@ pub enum SessionAccessError {
     Token(TokenError),
 }
 
-impl From<CkError> for SessionAccessError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for SessionAccessError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             SessionAccessError::Session(err)
         }
@@ -862,18 +862,18 @@ pub enum GetOperationStateError {
     Token(TokenError)
 }
 
-impl From<CkError> for GetOperationStateError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for GetOperationStateError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             GetOperationStateError::Session(err)
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL
+                ck::R_BUFFER_TOO_SMALL
                     => GetOperationStateError::BufferTooSmall,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_OPERATION_NOT_INITIALIZED
                     => GetOperationStateError::OperationNotInitialized,
-                CKR_STATE_UNSAVEABLE
+                ck::R_STATE_UNSAVEABLE
                     => GetOperationStateError::StateUnsaveable,
                 _ => GetOperationStateError::Token(TokenError::from(err))
             }
@@ -936,18 +936,18 @@ pub enum SetOperationStateError {
     Token(TokenError)
 }
 
-impl From<CkError> for SetOperationStateError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for SetOperationStateError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             SetOperationStateError::Session(err)
         }
         else {
             match err {
-                CKR_KEY_CHANGED => SetOperationStateError::KeyChanged,
-                CKR_KEY_NEEDED => SetOperationStateError::KeyNeeded,
-                CKR_KEY_NOT_NEEDED
+                ck::R_KEY_CHANGED => SetOperationStateError::KeyChanged,
+                ck::R_KEY_NEEDED => SetOperationStateError::KeyNeeded,
+                ck::R_KEY_NOT_NEEDED
                     => SetOperationStateError::KeyNotNeeded,
-                CKR_SAVED_STATE_INVALID
+                ck::R_SAVED_STATE_INVALID
                     => SetOperationStateError::SavedStateInvalid,
                 _ => SetOperationStateError::Token(TokenError::from(err))
             }
@@ -1025,26 +1025,26 @@ pub enum LoginError {
     Token(TokenError)
 }
 
-impl From<CkError> for LoginError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for LoginError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             LoginError::Session(err)
         }
         else {
             match err {
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_OPERATION_NOT_INITIALIZED
                     => LoginError::OperationNotInitialized,
-                CKR_PIN_INCORRECT => LoginError::PinIncorrect,
-                CKR_PIN_LOCKED => LoginError::PinLocked,
-                CKR_SESSION_READ_ONLY_EXISTS
+                ck::R_PIN_INCORRECT => LoginError::PinIncorrect,
+                ck::R_PIN_LOCKED => LoginError::PinLocked,
+                ck::R_SESSION_READ_ONLY_EXISTS
                     => LoginError::SessionReadOnlyExists,
-                CKR_USER_ALREADY_LOGGED_IN
+                ck::R_USER_ALREADY_LOGGED_IN
                     => LoginError::UserAlreadyLoggedIn,
-                CKR_USER_ANOTHER_ALREADY_LOGGED_IN
+                ck::R_USER_ANOTHER_ALREADY_LOGGED_IN
                     => LoginError::UserAnotherAlreadyLoggedIn,
-                CKR_USER_PIN_NOT_INITIALIZED
+                ck::R_USER_PIN_NOT_INITIALIZED
                     => LoginError::UserPinNotInitialized,
-                CKR_USER_TOO_MANY_TYPES => LoginError::UserTooManyTypes,
+                ck::R_USER_TOO_MANY_TYPES => LoginError::UserTooManyTypes,
                 _ => LoginError::Token(TokenError::from(err))
             }
         }
@@ -1102,14 +1102,14 @@ pub enum LogoutError {
     Token(TokenError)
 }
 
-impl From<CkError> for LogoutError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for LogoutError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             LogoutError::Session(err)
         }
         else {
             match err {
-                CKR_USER_NOT_LOGGED_IN => LogoutError::UserNotLoggedIn,
+                ck::R_USER_NOT_LOGGED_IN => LogoutError::UserNotLoggedIn,
                 _ => LogoutError::Token(TokenError::from(err))
             }
         }
@@ -1156,8 +1156,8 @@ pub enum CreateObjectError {
     Token(TokenError),
 }
 
-impl From<CkError> for CreateObjectError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for CreateObjectError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = TemplateError::from_ck(err) {
             CreateObjectError::Template(err)
         }
@@ -1218,8 +1218,8 @@ pub enum CopyObjectError {
     Token(TokenError),
 }
 
-impl From<CkError> for CopyObjectError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for CopyObjectError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = TemplateError::from_ck(err) {
             CopyObjectError::Template(err)
         }
@@ -1231,7 +1231,7 @@ impl From<CkError> for CopyObjectError {
         }
         else {
             match err {
-                CKR_OBJECT_HANDLE_INVALID
+                ck::R_OBJECT_HANDLE_INVALID
                     => CopyObjectError::ObjectHandleInvalid,
                 _ => CopyObjectError::Token(TokenError::from(err))
             }
@@ -1285,8 +1285,8 @@ pub enum ObjectAccessError {
     Token(TokenError),
 }
 
-impl From<CkError> for ObjectAccessError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for ObjectAccessError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = PermissionError::from_ck(err) {
             ObjectAccessError::Permission(err)
         }
@@ -1295,7 +1295,7 @@ impl From<CkError> for ObjectAccessError {
         }
         else {
             match err {
-                CKR_OBJECT_HANDLE_INVALID
+                ck::R_OBJECT_HANDLE_INVALID
                     => ObjectAccessError::ObjectHandleInvalid,
                 _ => ObjectAccessError::Token(TokenError::from(err))
             }
@@ -1356,20 +1356,20 @@ pub enum GetAttributeValueError {
     Token(TokenError)
 }
 
-impl From<CkError> for GetAttributeValueError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for GetAttributeValueError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             GetAttributeValueError::Session(err)
         }
         else {
             match err {
-                CKR_ATTRIBUTE_SENSITIVE
+                ck::R_ATTRIBUTE_SENSITIVE
                     => GetAttributeValueError::AttributeSensitive,
-                CKR_ATTRIBUTE_TYPE_INVALID
+                ck::R_ATTRIBUTE_TYPE_INVALID
                     => GetAttributeValueError::AttributeTypeInvalid,
-                CKR_BUFFER_TOO_SMALL
+                ck::R_BUFFER_TOO_SMALL
                     => GetAttributeValueError::BufferTooSmall,
-                CKR_OBJECT_HANDLE_INVALID
+                ck::R_OBJECT_HANDLE_INVALID
                     => GetAttributeValueError::ObjectHandleInvalid,
                 _ => GetAttributeValueError::Token(TokenError::from(err))
             }
@@ -1423,8 +1423,8 @@ pub enum FindObjectsInitError {
     Token(TokenError),
 }
 
-impl From<CkError> for FindObjectsInitError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for FindObjectsInitError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = TemplateError::from_ck(err) {
             FindObjectsInitError::Template(err)
         }
@@ -1436,7 +1436,7 @@ impl From<CkError> for FindObjectsInitError {
         }
         else {
             match err {
-                CKR_OPERATION_ACTIVE
+                ck::R_OPERATION_ACTIVE
                     => FindObjectsInitError::OperationActive,
                 _ => FindObjectsInitError::Token(TokenError::from(err))
             }
@@ -1489,14 +1489,14 @@ pub enum ContinuationError {
     Token(TokenError)
 }
 
-impl From<CkError> for ContinuationError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for ContinuationError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             ContinuationError::Session(err)
         }
         else {
             match err {
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_OPERATION_NOT_INITIALIZED
                     => ContinuationError::OperationNotInitialized,
                 _ => ContinuationError::Token(TokenError::from(err))
             }
@@ -1548,8 +1548,8 @@ pub enum CryptoInitError {
     Token(TokenError)
 }
 
-impl From<CkError> for CryptoInitError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for CryptoInitError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = KeyError::from_ck(err) {
             CryptoInitError::Key(err)
         }
@@ -1564,7 +1564,7 @@ impl From<CkError> for CryptoInitError {
         }
         else {
             match err {
-                CKR_OPERATION_ACTIVE => CryptoInitError::OperationActive,
+                ck::R_OPERATION_ACTIVE => CryptoInitError::OperationActive,
                 _ => CryptoInitError::Token(TokenError::from(err))
             }
         }
@@ -1631,17 +1631,17 @@ pub enum PlaintextError {
     Token(TokenError)
 }
 
-impl From<CkError> for PlaintextError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for PlaintextError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             PlaintextError::Session(err)
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL => PlaintextError::BufferTooSmall,
-                CKR_DATA_INVALID => PlaintextError::DataInvalid,
-                CKR_DATA_LEN_RANGE => PlaintextError::DataLenRange,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_BUFFER_TOO_SMALL => PlaintextError::BufferTooSmall,
+                ck::R_DATA_INVALID => PlaintextError::DataInvalid,
+                ck::R_DATA_LEN_RANGE => PlaintextError::DataLenRange,
+                ck::R_OPERATION_NOT_INITIALIZED
                     => PlaintextError::OperationNotInitialized,
                 _ => PlaintextError::Token(TokenError::from(err))
             }
@@ -1703,16 +1703,16 @@ pub enum PlaintextUpdateError {
     Token(TokenError)
 }
 
-impl From<CkError> for PlaintextUpdateError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for PlaintextUpdateError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             PlaintextUpdateError::Session(err)
         }
         else {
             match err {
-                CKR_DATA_INVALID => PlaintextUpdateError::DataInvalid,
-                CKR_DATA_LEN_RANGE => PlaintextUpdateError::DataLenRange,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_DATA_INVALID => PlaintextUpdateError::DataInvalid,
+                ck::R_DATA_LEN_RANGE => PlaintextUpdateError::DataLenRange,
+                ck::R_OPERATION_NOT_INITIALIZED
                     => PlaintextUpdateError::OperationNotInitialized,
                 _ => PlaintextUpdateError::Token(TokenError::from(err))
             }
@@ -1776,19 +1776,19 @@ pub enum CiphertextError {
     Token(TokenError)
 }
 
-impl From<CkError> for CiphertextError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for CiphertextError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             CiphertextError::Session(err)
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL => CiphertextError::BufferTooSmall,
-                CKR_ENCRYPTED_DATA_INVALID
+                ck::R_BUFFER_TOO_SMALL => CiphertextError::BufferTooSmall,
+                ck::R_ENCRYPTED_DATA_INVALID
                     => CiphertextError::EncryptedDataInvalid,
-                CKR_ENCRYPTED_DATA_LEN_RANGE
+                ck::R_ENCRYPTED_DATA_LEN_RANGE
                     => CiphertextError::EncryptedDataLenRange,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_OPERATION_NOT_INITIALIZED
                     => CiphertextError::OperationNotInitialized,
                 _ => CiphertextError::Token(TokenError::from(err))
             }
@@ -1842,8 +1842,8 @@ pub enum DigestInitError {
     Token(TokenError)
 }
 
-impl From<CkError> for DigestInitError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for DigestInitError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = MechanismError::from_ck(err) {
             DigestInitError::Mechanism(err)
         }
@@ -1855,7 +1855,7 @@ impl From<CkError> for DigestInitError {
         }
         else {
             match err {
-                CKR_OPERATION_ACTIVE => DigestInitError::OperationActive,
+                ck::R_OPERATION_ACTIVE => DigestInitError::OperationActive,
                 _ => DigestInitError::Token(TokenError::from(err))
             }
         }
@@ -1910,15 +1910,15 @@ pub enum DigestError {
     Token(TokenError)
 }
 
-impl From<CkError> for DigestError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for DigestError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             DigestError::Session(err)
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL => DigestError::BufferTooSmall,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_BUFFER_TOO_SMALL => DigestError::BufferTooSmall,
+                ck::R_OPERATION_NOT_INITIALIZED
                     => DigestError::OperationNotInitialized,
                 _ => DigestError::Token(TokenError::from(err))
             }
@@ -1975,8 +1975,8 @@ pub enum DigestKeyError {
     Token(TokenError)
 }
 
-impl From<CkError> for DigestKeyError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for DigestKeyError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = KeyError::from_ck(err) {
             DigestKeyError::Key(err)
         }
@@ -1985,8 +1985,8 @@ impl From<CkError> for DigestKeyError {
         }
         else {
             match err {
-                CKR_KEY_INDIGESTIBLE => DigestKeyError::KeyIndigestible,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_KEY_INDIGESTIBLE => DigestKeyError::KeyIndigestible,
+                ck::R_OPERATION_NOT_INITIALIZED
                     => DigestKeyError::OperationNotInitialized,
                 _ => DigestKeyError::Token(TokenError::from(err))
             }
@@ -2054,19 +2054,19 @@ pub enum VerifyError {
     Token(TokenError)
 }
 
-impl From<CkError> for VerifyError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for VerifyError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             VerifyError::Session(err)
         }
         else {
             match err {
-                CKR_DATA_INVALID => VerifyError::DataInvalid,
-                CKR_DATA_LEN_RANGE => VerifyError::DataLenRange,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_DATA_INVALID => VerifyError::DataInvalid,
+                ck::R_DATA_LEN_RANGE => VerifyError::DataLenRange,
+                ck::R_OPERATION_NOT_INITIALIZED
                     => VerifyError::OperationNotInitialized,
-                CKR_SIGNATURE_INVALID => VerifyError::SignatureInvalid,
-                CKR_SIGNATURE_LEN_RANGE
+                ck::R_SIGNATURE_INVALID => VerifyError::SignatureInvalid,
+                ck::R_SIGNATURE_LEN_RANGE
                     => VerifyError::SignatureLenRange,
                 _ => VerifyError::Token(TokenError::from(err))
             }
@@ -2138,22 +2138,22 @@ pub enum VerifyRecoverError {
     Token(TokenError)
 }
 
-impl From<CkError> for VerifyRecoverError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for VerifyRecoverError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = SessionError::from_ck(err) {
             VerifyRecoverError::Session(err)
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL
+                ck::R_BUFFER_TOO_SMALL
                     => VerifyRecoverError::BufferTooSmall,
-                CKR_DATA_INVALID => VerifyRecoverError::DataInvalid,
-                CKR_DATA_LEN_RANGE => VerifyRecoverError::DataLenRange,
-                CKR_OPERATION_NOT_INITIALIZED
+                ck::R_DATA_INVALID => VerifyRecoverError::DataInvalid,
+                ck::R_DATA_LEN_RANGE => VerifyRecoverError::DataLenRange,
+                ck::R_OPERATION_NOT_INITIALIZED
                     => VerifyRecoverError::OperationNotInitialized,
-                CKR_SIGNATURE_INVALID
+                ck::R_SIGNATURE_INVALID
                     => VerifyRecoverError::SignatureInvalid,
-                CKR_SIGNATURE_LEN_RANGE
+                ck::R_SIGNATURE_LEN_RANGE
                     => VerifyRecoverError::SignatureLenRange,
                 _ => VerifyRecoverError::Token(TokenError::from(err))
             }
@@ -2207,8 +2207,8 @@ pub enum CreateKeyError {
     Token(TokenError),
 }
 
-impl From<CkError> for CreateKeyError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for CreateKeyError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = TemplateError::from_ck(err) {
             CreateKeyError::Template(err)
         }
@@ -2287,8 +2287,8 @@ pub enum WrapKeyError {
     Token(TokenError)
 }
 
-impl From<CkError> for WrapKeyError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for WrapKeyError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = KeyError::from_ck(err) {
             WrapKeyError::Key(err)
         }
@@ -2306,10 +2306,10 @@ impl From<CkError> for WrapKeyError {
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL => WrapKeyError::BufferTooSmall,
-                CKR_KEY_NOT_WRAPPABLE => WrapKeyError::KeyNotWrappable,
-                CKR_KEY_UNEXTRACTABLE => WrapKeyError::KeyUnextractable,
-                CKR_OPERATION_ACTIVE => WrapKeyError::OperationActive,
+                ck::R_BUFFER_TOO_SMALL => WrapKeyError::BufferTooSmall,
+                ck::R_KEY_NOT_WRAPPABLE => WrapKeyError::KeyNotWrappable,
+                ck::R_KEY_UNEXTRACTABLE => WrapKeyError::KeyUnextractable,
+                ck::R_OPERATION_ACTIVE => WrapKeyError::OperationActive,
                 _ => WrapKeyError::Token(TokenError::from(err))
             }
         }
@@ -2381,8 +2381,8 @@ pub enum UnwrapKeyError {
     Token(TokenError)
 }
 
-impl From<CkError> for UnwrapKeyError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for UnwrapKeyError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = KeyError::unwrapping_from_ck(err) {
             UnwrapKeyError::UnwrappingKey(err)
         }
@@ -2400,11 +2400,11 @@ impl From<CkError> for UnwrapKeyError {
         }
         else {
             match err {
-                CKR_BUFFER_TOO_SMALL => UnwrapKeyError::BufferTooSmall,
-                CKR_OPERATION_ACTIVE => UnwrapKeyError::OperationActive,
-                CKR_WRAPPED_KEY_INVALID
+                ck::R_BUFFER_TOO_SMALL => UnwrapKeyError::BufferTooSmall,
+                ck::R_OPERATION_ACTIVE => UnwrapKeyError::OperationActive,
+                ck::R_WRAPPED_KEY_INVALID
                     => UnwrapKeyError::WrappedKeyInvalid,
-                CKR_WRAPPED_KEY_LEN_RANGE
+                ck::R_WRAPPED_KEY_LEN_RANGE
                     => UnwrapKeyError::WrappedKeyLenRange,
                 _ => UnwrapKeyError::Token(TokenError::from(err))
             }
@@ -2468,8 +2468,8 @@ pub enum DeriveKeyError {
     Token(TokenError)
 }
 
-impl From<CkError> for DeriveKeyError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for DeriveKeyError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = KeyError::from_ck(err) {
             DeriveKeyError::Key(err)
         }
@@ -2487,7 +2487,7 @@ impl From<CkError> for DeriveKeyError {
         }
         else {
             match err {
-                CKR_OPERATION_ACTIVE => DeriveKeyError::OperationActive,
+                ck::R_OPERATION_ACTIVE => DeriveKeyError::OperationActive,
                 _ => DeriveKeyError::Token(TokenError::from(err))
             }
         }
@@ -2544,8 +2544,8 @@ pub enum SeedRandomError {
     Token(TokenError)
 }
 
-impl From<CkError> for SeedRandomError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for SeedRandomError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = PermissionError::from_ck(err) {
             SeedRandomError::Permission(err)
         }
@@ -2554,10 +2554,10 @@ impl From<CkError> for SeedRandomError {
         }
         else {
             match err {
-                CKR_OPERATION_ACTIVE => SeedRandomError::OperationActive,
-                CKR_RANDOM_SEED_NOT_SUPPORTED
+                ck::R_OPERATION_ACTIVE => SeedRandomError::OperationActive,
+                ck::R_RANDOM_SEED_NOT_SUPPORTED
                     => SeedRandomError::RandomSeedNotSupported,
-                CKR_RANDOM_NO_RNG => SeedRandomError::RandomNoRng,
+                ck::R_RANDOM_NO_RNG => SeedRandomError::RandomNoRng,
                 _ => SeedRandomError::Token(TokenError::from(err))
             }
         }
@@ -2609,8 +2609,8 @@ pub enum GenerateRandomError {
     Token(TokenError)
 }
 
-impl From<CkError> for GenerateRandomError {
-    fn from(err: CkError) -> Self {
+impl From<ck::Error> for GenerateRandomError {
+    fn from(err: ck::Error) -> Self {
         if let Some(err) = PermissionError::from_ck(err) {
             GenerateRandomError::Permission(err)
         }
@@ -2619,9 +2619,9 @@ impl From<CkError> for GenerateRandomError {
         }
         else {
             match err {
-                CKR_OPERATION_ACTIVE
+                ck::R_OPERATION_ACTIVE
                     => GenerateRandomError::OperationActive,
-                CKR_RANDOM_NO_RNG => GenerateRandomError::RandomNoRng,
+                ck::R_RANDOM_NO_RNG => GenerateRandomError::RandomNoRng,
                 _ => GenerateRandomError::Token(TokenError::from(err))
             }
         }
