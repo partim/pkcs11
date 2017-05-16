@@ -1,6 +1,6 @@
 
 use ::cryptoki::{Cryptoki, SessionFlags, SessionInfo, SlotId, UserType};
-use ::cryptoki::error::*;
+use ::error::*;
 use super::core::Core;
 
 

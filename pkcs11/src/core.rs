@@ -2,7 +2,7 @@
 
 use ::cryptoki::{Cryptoki, SessionFlags, SessionHandle, SessionInfo, SlotId,
                  UserType};
-use ::cryptoki::error::*;
+use ::error::*;
 
 //------------ Core ---------------------------------------------------------
 
@@ -42,26 +42,26 @@ impl Drop for Core {
 /// here.
 impl Core {
     pub fn init_pin(&self, pin: Option<&str>) -> Result<(), SetPinError> {
-        self.ck.init_pin(self.handle, pin)
+        self.ck.init_pin(self.handle, pin).map_err(Into::into)
     }
 
     pub fn set_pin(&self, old_pin: Option<&str>, new_pin: Option<&str>)
                    -> Result<(), SetPinError> {
-        self.ck.set_pin(self.handle, old_pin, new_pin)
+        self.ck.set_pin(self.handle, old_pin, new_pin).map_err(Into::into)
     }
 
     pub fn get_session_info(&self, info: &mut SessionInfo)
                             -> Result<(), SessionAccessError> {
-        self.ck.get_session_info(self.handle, info)
+        self.ck.get_session_info(self.handle, info).map_err(Into::into)
     }
 
     pub fn login(&self, user_type: UserType, pin: Option<&str>)
                  -> Result<(), LoginError> {
-        self.ck.login(self.handle, user_type, pin)
+        self.ck.login(self.handle, user_type, pin).map_err(Into::into)
     }
 
     pub fn logout(&self) -> Result<(), LogoutError> {
-        self.ck.logout(self.handle)
+        self.ck.logout(self.handle).map_err(Into::into)
     }
 }
 
